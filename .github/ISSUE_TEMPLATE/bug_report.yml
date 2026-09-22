@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem with Frontend Handoff Studio
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please do not attach confidential design files.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 / macOS 15
+    validations:
+      required: true
+  - type: input
+    id: screens
+    attributes:
+      label: Number of selected screens
+      placeholder: "3"
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. Select...\n2. Run...\n3. Click..."
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Export settings
+      description: Mention any settings changed from the defaults.
