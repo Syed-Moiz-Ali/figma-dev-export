@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem with Frontend Handoff Studio
+description: Report a reproducible problem with Dev Export for Figma
 title: "[Bug]: "
 labels: ["bug"]
 body:

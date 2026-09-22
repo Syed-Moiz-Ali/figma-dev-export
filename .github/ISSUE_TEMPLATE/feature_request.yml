@@ -7,7 +7,7 @@ body:
     id: problem
     attributes:
       label: Problem or workflow
-      description: What frontend handoff problem are you trying to solve?
+      description: What design export problem are you trying to solve?
     validations:
       required: true
   - type: textarea
