@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or workflow
+      description: What frontend handoff problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested improvement
+    validations:
+      required: true
+  - type: input
+    id: framework
+    attributes:
+      label: Frontend stack (optional)
+      placeholder: React, Vue, Flutter, SwiftUI, etc.
