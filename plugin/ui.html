@@ -1,0 +1,684 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box}
+:root{
+  color-scheme:light dark;
+  --bg:var(--figma-color-bg,#f8fafc);
+  --surface:var(--figma-color-bg,#ffffff);
+  --surface-secondary:var(--figma-color-bg-secondary,#f8fafc);
+  --surface-hover:var(--figma-color-bg-hover,#f1f5f9);
+  --text:var(--figma-color-text,#111827);
+  --muted:var(--figma-color-text-secondary,#64748b);
+  --subtle:var(--figma-color-text-tertiary,#94a3b8);
+  --border:var(--figma-color-border,#e2e8f0);
+  --border-strong:var(--figma-color-border-strong,#cbd5e1);
+  --brand:#6366f1;
+  --brand-hover:#4f46e5;
+  --brand-soft:rgba(99,102,241,.11);
+  --brand-border:rgba(99,102,241,.32);
+  --on-brand:#ffffff;
+  --success:#15803d;
+  --danger:#dc2626;
+}
+html,body{height:100%}
+body{
+  margin:0;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:12px;
+}
+button,input{font:inherit}
+.shell{height:100%;display:flex;flex-direction:column}
+.topbar{
+  position:relative;
+  padding:18px 20px 15px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.topbar::after{
+  content:"";
+  position:absolute;left:20px;right:20px;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(99,102,241,.30),transparent);
+}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.logo{
+  width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(145deg,#818cf8,#4f46e5);
+  box-shadow:0 8px 24px rgba(79,70,229,.18),inset 0 0 0 1px rgba(255,255,255,.22)
+}
+.logo svg{width:19px;height:19px}
+.title-wrap{min-width:0}
+.title-row{display:flex;align-items:center;gap:8px}
+h1{font-size:14px;letter-spacing:-.02em;margin:0;font-weight:720}
+.version{
+  display:inline-flex;align-items:center;height:19px;padding:0 7px;border-radius:999px;
+  background:var(--brand-soft);color:var(--brand);font-size:9px;font-weight:800;letter-spacing:.06em
+}
+.subtitle{margin-top:3px;color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{
+  width:30px;height:30px;border:1px solid var(--border);border-radius:9px;background:var(--surface);
+  color:var(--muted);display:grid;place-items:center;cursor:pointer
+}
+.icon-btn:hover{background:var(--surface-hover);color:var(--text)}
+.stepper{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:15px}
+.step{
+  display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface);color:var(--muted)
+}
+.step.active{border-color:var(--brand);background:var(--brand);color:var(--on-brand)}
+.step.done{color:var(--success)}
+.step-dot{
+  width:18px;height:18px;border-radius:6px;background:var(--surface-hover);display:grid;place-items:center;
+  font-size:9px;font-weight:800;flex:none
+}
+.step.active .step-dot{background:rgba(255,255,255,.18);color:var(--on-brand)}
+.step.done .step-dot{background:var(--brand-soft);color:var(--brand)}
+.step strong{font-size:10px;line-height:1}
+.content{flex:1;overflow:auto;padding:14px 20px 98px}
+.section{margin-bottom:13px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.section-title{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:720}
+.count{
+  height:19px;min-width:19px;padding:0 6px;border-radius:999px;background:var(--surface-hover);
+  color:var(--muted);font-size:9px;font-weight:750;display:grid;place-items:center
+}
+.ghost{
+  padding:0;border:0;background:none;color:var(--muted);font-size:10px;font-weight:650;cursor:pointer
+}
+.ghost:hover{color:var(--brand)}
+.selection-card,.panel{
+  border:1px solid var(--border);border-radius:14px;background:var(--surface);
+  box-shadow:0 1px 2px rgba(16,24,40,.025)
+}
+.selection-card{overflow:hidden}
+.selection-list{max-height:184px;overflow:auto;padding:5px}
+.screen-row{
+  display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:9px;
+  padding:8px 9px;border-radius:10px
+}
+.screen-row:hover{background:var(--surface-hover)}
+.screen-num{
+  width:26px;height:26px;border-radius:8px;background:var(--brand-soft);color:var(--brand);
+  font-size:9px;font-weight:800;display:grid;place-items:center
+}
+.screen-main{min-width:0}
+.screen-name{font-size:10.5px;font-weight:680;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.screen-meta{font-size:9.5px;color:var(--muted);margin-top:2px}
+.type-pill{
+  font-size:8.5px;font-weight:760;letter-spacing:.05em;padding:4px 6px;border-radius:7px;
+  color:var(--muted);background:var(--surface-hover)
+}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+.empty-icon{
+  width:38px;height:38px;margin:0 auto 9px;border:1px dashed var(--border-strong);border-radius:12px;
+  display:grid;place-items:center;color:var(--subtle)
+}
+.empty strong{display:block;color:var(--text);font-size:11px;margin-bottom:3px}
+.panel{padding:5px}
+.option{
+  display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:9px;
+  min-height:46px;padding:7px 9px;border-radius:10px
+}
+.option:hover{background:var(--surface-hover)}
+.option-icon{
+  width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  color:var(--brand);background:var(--brand-soft)
+}
+.option-icon svg{width:15px;height:15px}
+.option-copy strong{font-size:10.5px;font-weight:680;display:block}
+.option-copy span{display:block;color:var(--muted);font-size:9.5px;margin-top:2px}
+.switch{position:relative;width:31px;height:18px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.slider{
+  position:absolute;inset:0;cursor:pointer;border-radius:999px;background:var(--border-strong);transition:.18s ease
+}
+.slider::after{
+  content:"";position:absolute;width:14px;height:14px;left:2px;top:2px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:.18s ease
+}
+.switch input:checked + .slider{background:var(--brand)}
+.switch input:checked + .slider::after{transform:translateX(13px)}
+.segment{
+  display:flex;padding:2px;border:1px solid var(--border);border-radius:9px;background:var(--surface-hover)
+}
+.segment button{
+  border:0;background:transparent;color:var(--muted);height:24px;min-width:34px;padding:0 8px;
+  border-radius:7px;cursor:pointer;font-size:9px;font-weight:750
+}
+.segment button.active{background:var(--brand);color:var(--on-brand);box-shadow:0 4px 12px rgba(79,70,229,.18)}
+.advanced summary{
+  list-style:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+  padding:11px 13px;border:1px solid var(--border);border-radius:13px;background:var(--surface);
+  font-size:10.5px;font-weight:680
+}
+.advanced summary::-webkit-details-marker{display:none}
+.advanced[open] summary{border-radius:13px 13px 0 0}
+.advanced-body{border:1px solid var(--border);border-top:0;border-radius:0 0 13px 13px;background:var(--surface);padding:5px}
+.number-input{
+  width:72px;height:27px;padding:0 8px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);outline:none
+}
+.number-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.notice{
+  display:none;margin-top:7px;padding:9px 10px;border-radius:10px;background:#fff7e8;color:#8a5a10;
+  border:1px solid #f0d9a9;font-size:9.5px;line-height:1.45
+}
+.progress-card{
+  display:none;margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:13px;background:var(--surface)
+}
+.progress-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.progress-label{font-size:10px;font-weight:700}
+.progress-value{font-size:9.5px;color:var(--muted)}
+.progress-track{height:6px;margin-top:9px;border-radius:99px;background:var(--surface-hover);overflow:hidden}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#818cf8,#4f46e5);border-radius:99px;transition:width .25s ease}
+.progress-msg{font-size:9.5px;color:var(--muted);margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result{display:none;margin-top:13px}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.metric{padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.metric b{display:block;font-size:15px;letter-spacing:-.03em}
+.metric span{display:block;color:var(--muted);font-size:8.5px;margin-top:2px}
+.package-path{
+  display:flex;align-items:center;gap:8px;margin-top:8px;padding:9px 10px;border:1px dashed var(--border-strong);
+  border-radius:11px;color:var(--muted);font-size:9px
+}
+.package-path svg{width:14px;height:14px;color:var(--brand)}
+.bottom{
+  position:absolute;left:0;right:0;bottom:0;padding:12px 20px 16px;
+  background:linear-gradient(180deg,transparent 0,var(--bg) 28%,var(--bg) 100%)
+}
+.actions{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.primary,.secondary{
+  height:42px;border-radius:12px;font-weight:720;cursor:pointer;border:1px solid transparent
+}
+.primary{
+  color:var(--on-brand);background:linear-gradient(135deg,#6366f1,#4f46e5);
+  box-shadow:0 8px 22px rgba(79,70,229,.20)
+}
+.primary:hover{background:linear-gradient(135deg,#5b5eea,#4338ca)}
+.primary:disabled,.secondary:disabled{opacity:.45;cursor:default;box-shadow:none}
+.secondary{
+  min-width:110px;padding:0 14px;background:var(--surface);border-color:var(--border);color:var(--text)
+}
+.status{height:17px;margin-top:6px;font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status.success{color:var(--success)}.status.error{color:var(--danger)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+</style>
+<style>
+/* Public indigo theme refinements */
+.version{background:var(--brand-soft);color:var(--brand)}
+.step.active strong{color:var(--on-brand)}
+.step.active .step-dot{border:1px solid rgba(255,255,255,.20)}
+.switch input:checked + .slider{background:var(--brand)}
+.screen-num{background:var(--brand-soft);color:var(--brand)}
+.option-icon{background:var(--brand-soft);color:var(--brand)}
+.primary,.step.active,.segment button.active{color:var(--on-brand)}
+.secondary,.icon-btn,.selection-card,.panel,.advanced summary,.advanced-body,.metric{background:var(--surface)}
+body{background:var(--bg);color:var(--text)}
+h1,.screen-name,.option-copy strong,.metric b{color:var(--text)}
+@media (prefers-color-scheme:dark){
+  :root{
+    --brand:#818cf8;
+    --brand-hover:#6366f1;
+    --brand-soft:rgba(129,140,248,.14);
+    --brand-border:rgba(129,140,248,.36);
+    --on-brand:#ffffff;
+  }
+}
+
+.privacy-chip{display:inline-flex;align-items:center;gap:6px;margin-top:7px;padding:4px 7px;border-radius:999px;background:var(--surface-hover);color:var(--muted);font-size:9px;font-weight:650}
+.privacy-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.10)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand-row">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 6.5 12 2l8 4.5-8 4.5-8-4.5Z" fill="white" opacity=".96"/>
+            <path d="m4 11 8 4.5 8-4.5M4 15.5l8 4.5 8-4.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+          </svg>
+        </div>
+        <div class="title-wrap">
+          <div class="title-row"><h1>Frontend Handoff Studio</h1><span class="version">MULTI-SCREEN</span></div>
+          <div class="subtitle">Structured screens, exact assets and implementation-ready frontend handoffs</div>
+          <div class="privacy-chip"><span class="privacy-dot"></span>Runs locally · No network access · No analytics</div>
+        </div>
+      </div>
+      <button id="refresh" class="icon-btn" title="Refresh selection">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"/></svg>
+      </button>
+    </div>
+
+    <div class="stepper">
+      <div id="step1" class="step active"><span class="step-dot">1</span><strong>Select</strong></div>
+      <div id="step2" class="step"><span class="step-dot">2</span><strong>Configure</strong></div>
+      <div id="step3" class="step"><span class="step-dot">3</span><strong>Export</strong></div>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">Selected screens <span id="screenCount" class="count">0</span></div>
+        <button id="refreshText" class="ghost">Refresh</button>
+      </div>
+      <div class="selection-card">
+        <div id="selection" class="selection-list">
+          <div class="empty">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M17 14v6M14 17h6"/></svg>
+            </div>
+            <strong>Select complete Figma frames</strong>
+            Shift-click multiple screens on canvas or in Layers.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><div class="section-title">Handoff package</div></div>
+      <div class="panel">
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>
+          </div>
+          <div class="option-copy"><strong>Screen previews</strong><span>2× PNG for visual verification</span></div>
+          <label class="switch"><input id="includePreview" type="checkbox" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></svg>
+          </div>
+          <div class="option-copy"><strong>Exact vectors</strong><span>SVG source + PNG inspection copy</span></div>
+          <label class="switch"><input id="collectSvg" type="checkbox" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 16l4-4 3 3 5-6 4 5"/><rect x="3" y="4" width="18" height="16" rx="3"/></svg>
+          </div>
+          <div class="option-copy"><strong>PNG copy for every asset</strong><span>Icons, composed vectors and image nodes</span></div>
+          <label class="switch"><input id="collectAssetPng" type="checkbox" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 7h10v10H7z"/><path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6"/></svg>
+          </div>
+          <div class="option-copy"><strong>Composed graphics</strong><span>Merge decorative vector groups into one SVG + PNG</span></div>
+          <label class="switch"><input id="collectComposedSvg" type="checkbox" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2"/><path d="m4 18 5-5 3 3 3-4 5 6"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+          </div>
+          <div class="option-copy"><strong>Raster images</strong><span>Original image + rendered PNG appearance</span></div>
+          <label class="switch"><input id="collectImages" type="checkbox" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+          </div>
+          <div class="option-copy"><strong>Asset PNG quality</strong><span>2× is best for inspection without huge files</span></div>
+          <div id="assetScale" class="segment"><button data-scale="1">1×</button><button class="active" data-scale="2">2×</button></div>
+        </div>
+      </div>
+    </section>
+
+    <details class="advanced">
+      <summary><span>Advanced options</span><span style="color:var(--muted)">⌄</span></summary>
+      <div class="advanced-body">
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+          </div>
+          <div class="option-copy"><strong>Resolve variables</strong><span>Tokens, collections and modes</span></div>
+          <label class="switch"><input id="resolveVariables" type="checkbox" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 5h8M7 9h10M6 13h12M5 17h14"/></svg>
+          </div>
+          <div class="option-copy"><strong>Embed SVG markup in JSON</strong><span>Usually unnecessary when asset files are included</span></div>
+          <label class="switch"><input id="embedSvgInJson" type="checkbox"><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 5h14v14H5z"/><path d="M8 9h8M8 13h8"/></svg>
+          </div>
+          <div class="option-copy"><strong>Figma CSS snapshot</strong><span>Enable only when CSS hints are useful for your target stack</span></div>
+          <label class="switch"><input id="includeCSS" type="checkbox"><span class="slider"></span></label>
+        </div>
+        <div id="cssNotice" class="notice">CSS can be useful for web implementations, but it duplicates structural layout data and can make multi-screen exports significantly larger.</div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12s3-5 9-5 9 5 9 5-3 5-9 5-9-5-9-5Z"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
+          <div class="option-copy"><strong>Include hidden layers</strong><span>Export invisible Figma content too</span></div>
+          <label class="switch"><input id="includeHidden" type="checkbox"><span class="slider"></span></label>
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 8h14M5 16h14M9 4v8M15 12v8"/></svg>
+          </div>
+          <div class="option-copy"><strong>Layer limit</strong><span>Maximum serialized nodes per screen</span></div>
+          <input id="maxNodes" class="number-input" type="number" min="100" max="15000" step="100" value="4000">
+        </div>
+
+        <div class="option">
+          <div class="option-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6h14v12H5z"/><path d="M9 10h6"/></svg>
+          </div>
+          <div class="option-copy"><strong>Asset budget</strong><span>Per screen, including PNG copies (MB)</span></div>
+          <input id="maxAssetMB" class="number-input" type="number" min="5" max="150" step="5" value="40">
+        </div>
+      </div>
+    </details>
+
+    <div id="progressCard" class="progress-card">
+      <div class="progress-top"><span id="progressLabel" class="progress-label">Preparing</span><span id="progressValue" class="progress-value">0%</span></div>
+      <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+      <div id="progressMsg" class="progress-msg">Waiting to start…</div>
+    </div>
+
+    <section id="result" class="result">
+      <div class="section-head"><div class="section-title">Package ready</div><span class="count" style="color:var(--success)">✓</span></div>
+      <div class="metric-grid">
+        <div class="metric"><b id="mScreens">0</b><span>Screens</span></div>
+        <div class="metric"><b id="mAssets">0</b><span>Assets</span></div>
+        <div class="metric"><b id="mPngs">0</b><span>PNG copies</span></div>
+        <div class="metric"><b id="mSize">0</b><span>Payload MB</span></div>
+      </div>
+      <div class="package-path">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h6l2 2h8v10H4z"/><path d="M4 7V5h6l2 2"/></svg>
+        Each screen includes structured JSON, preview, SVG + PNG assets, manifest and an interactive asset catalog.
+      </div>
+    </section>
+  </main>
+
+  <footer class="bottom">
+    <div class="actions">
+      <button id="generate" class="primary" disabled>Generate handoff package</button>
+      <button id="download" class="secondary" style="display:none" disabled>Download ZIP</button>
+    </div>
+    <div id="status" class="status">Select one or more complete frames to begin.</div>
+  </footer>
+</div>
+
+<script>
+let selectedCount=0;
+let generated=false;
+let assetPngScale=2;
+
+const $=id=>document.getElementById(id);
+
+function setStatus(text,kind=""){
+  $("status").textContent=text||"";
+  $("status").className="status "+kind;
+}
+function setStep(n){
+  for(let i=1;i<=3;i++){
+    const el=$("step"+i);
+    el.className="step";
+    if(i<n) el.classList.add("done");
+    if(i===n) el.classList.add("active");
+  }
+}
+function setProgress(value,label,message){
+  $("progressCard").style.display="block";
+  $("progressFill").style.width=Math.max(0,Math.min(100,value))+"%";
+  $("progressValue").textContent=Math.round(value)+"%";
+  $("progressLabel").textContent=label||"Working";
+  $("progressMsg").textContent=message||"";
+}
+function refreshSelection(){
+  parent.postMessage({pluginMessage:{type:"refresh-selection"}},"*");
+}
+function downloadBlob(data,name,mime){
+  const blob=new Blob([data],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+// No TextEncoder dependency.
+function utf8Encode(str){
+  const out=[];
+  for(let i=0;i<str.length;i++){
+    let cp=str.charCodeAt(i);
+    if(cp>=0xD800&&cp<=0xDBFF&&i+1<str.length){
+      const low=str.charCodeAt(i+1);
+      if(low>=0xDC00&&low<=0xDFFF){cp=0x10000+((cp-0xD800)<<10)+(low-0xDC00);i++}
+    }
+    if(cp<=0x7F)out.push(cp);
+    else if(cp<=0x7FF)out.push(0xC0|(cp>>6),0x80|(cp&0x3F));
+    else if(cp<=0xFFFF)out.push(0xE0|(cp>>12),0x80|((cp>>6)&0x3F),0x80|(cp&0x3F));
+    else out.push(0xF0|(cp>>18),0x80|((cp>>12)&0x3F),0x80|((cp>>6)&0x3F),0x80|(cp&0x3F));
+  }
+  return new Uint8Array(out);
+}
+let crcTable;
+function crc32(bytes){
+  if(!crcTable){
+    crcTable=new Uint32Array(256);
+    for(let n=0;n<256;n++){
+      let c=n;
+      for(let k=0;k<8;k++)c=(c&1)?0xEDB88320^(c>>>1):c>>>1;
+      crcTable[n]=c>>>0;
+    }
+  }
+  let c=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++)c=crcTable[(c^bytes[i])&255]^(c>>>8);
+  return(c^0xFFFFFFFF)>>>0;
+}
+function u16(v,o,x){v.setUint16(o,x,true)}
+function u32(v,o,x){v.setUint32(o,x>>>0,true)}
+function concat(parts){
+  let len=0;for(const p of parts)len+=p.length;
+  const out=new Uint8Array(len);let off=0;
+  for(const p of parts){out.set(p,off);off+=p.length}
+  return out;
+}
+function createZip(files){
+  const locals=[],centrals=[];let offset=0;
+  const d=new Date(),year=Math.max(1980,d.getFullYear());
+  const time=((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|(Math.floor(d.getSeconds()/2)&31);
+  const date=(((year-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31);
+
+  for(const f of files){
+    const name=utf8Encode(String(f.fileName||"file").replace(/\\/g,"/"));
+    const data=f.bytes instanceof Uint8Array?f.bytes:new Uint8Array(f.bytes);
+    const crc=crc32(data);
+
+    const local=new Uint8Array(30+name.length),lv=new DataView(local.buffer);
+    u32(lv,0,0x04034b50);u16(lv,4,20);u16(lv,6,0x0800);u16(lv,8,0);
+    u16(lv,10,time);u16(lv,12,date);u32(lv,14,crc);u32(lv,18,data.length);u32(lv,22,data.length);
+    u16(lv,26,name.length);u16(lv,28,0);local.set(name,30);
+    locals.push(local,data);
+
+    const central=new Uint8Array(46+name.length),cv=new DataView(central.buffer);
+    u32(cv,0,0x02014b50);u16(cv,4,20);u16(cv,6,20);u16(cv,8,0x0800);u16(cv,10,0);
+    u16(cv,12,time);u16(cv,14,date);u32(cv,16,crc);u32(cv,20,data.length);u32(cv,24,data.length);
+    u16(cv,28,name.length);u16(cv,30,0);u16(cv,32,0);u16(cv,34,0);u16(cv,36,0);
+    u32(cv,38,0);u32(cv,42,offset);central.set(name,46);
+    centrals.push(central);offset+=local.length+data.length;
+  }
+  const centralSize=centrals.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array(22),ev=new DataView(end.buffer);
+  u32(ev,0,0x06054b50);u16(ev,4,0);u16(ev,6,0);u16(ev,8,files.length);u16(ev,10,files.length);
+  u32(ev,12,centralSize);u32(ev,16,offset);u16(ev,20,0);
+  return concat([...locals,...centrals,end]);
+}
+
+$("refresh").onclick=refreshSelection;
+$("refreshText").onclick=refreshSelection;
+
+$("assetScale").querySelectorAll("button").forEach(btn=>{
+  btn.onclick=()=>{
+    assetPngScale=Number(btn.dataset.scale)||2;
+    $("assetScale").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===btn));
+  };
+});
+
+$("includeCSS").onchange=()=>{
+  $("cssNotice").style.display=$("includeCSS").checked?"block":"none";
+};
+
+$("generate").onclick=()=>{
+  if(!selectedCount){setStatus("Select at least one complete frame first.","error");return}
+  generated=false;
+  $("generate").disabled=true;
+  $("download").disabled=true;
+  $("download").style.display="none";
+  $("result").style.display="none";
+  setStep(2);
+  setProgress(1,"Preparing","Validating screen selection and export settings");
+  setStatus("Generating high-fidelity multi-screen handoff…");
+
+  parent.postMessage({pluginMessage:{
+    type:"generate-multi",
+    options:{
+      resolveVariables:$("resolveVariables").checked,
+      collectSvg:$("collectSvg").checked,
+      collectComposedSvg:$("collectComposedSvg").checked,
+      collectImages:$("collectImages").checked,
+      collectAssetPng:$("collectAssetPng").checked,
+      assetPngScale,
+      includePreview:$("includePreview").checked,
+      embedSvgInJson:$("embedSvgInJson").checked,
+      includeCSS:$("includeCSS").checked,
+      includeHidden:$("includeHidden").checked,
+      maxNodes:+$("maxNodes").value,
+      maxAssetMB:+$("maxAssetMB").value,
+      previewScale:2
+    }
+  }},"*");
+};
+
+$("download").onclick=()=>{
+  if(!generated)return;
+  $("download").disabled=true;
+  setStep(3);
+  setProgress(100,"Packaging","Building your master ZIP locally");
+  setStatus("Building master ZIP…");
+  parent.postMessage({pluginMessage:{type:"download-package"}},"*");
+};
+
+onmessage=e=>{
+  const m=e.data.pluginMessage;
+  if(!m)return;
+
+  if(m.type==="selection"){
+    const p=m.payload;
+    selectedCount=p.count||0;
+    $("screenCount").textContent=selectedCount;
+
+    if(!selectedCount){
+      $("selection").innerHTML=`<div class="empty">
+        <div class="empty-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M17 14v6M14 17h6"/></svg></div>
+        <strong>Select complete Figma frames</strong>Shift-click multiple screens on canvas or in Layers.</div>`;
+      $("generate").disabled=true;
+      setStep(1);
+      setStatus("Select one or more complete frames to begin.");
+    }else{
+      const rows=p.items.map(x=>`<div class="screen-row">
+        <div class="screen-num">${String(x.index).padStart(2,"0")}</div>
+        <div class="screen-main">
+          <div class="screen-name">${escapeHtml(x.name)}</div>
+          <div class="screen-meta">${x.width!==undefined?`${Math.round(x.width)} × ${Math.round(x.height)}`:"Size unavailable"}</div>
+        </div>
+        <span class="type-pill">${escapeHtml(x.type)}</span>
+      </div>`).join("");
+      const ignored=p.nestedSelectionsIgnored?`<div style="padding:7px 10px 10px;color:var(--muted);font-size:9px">${p.nestedSelectionsIgnored} nested selection(s) ignored because their parent screen is already selected.</div>`:"";
+      $("selection").innerHTML=rows+ignored;
+      $("generate").disabled=false;
+      setStep(1);
+      setStatus(`${selectedCount} screen${selectedCount===1?"":"s"} ready to configure.`,"success");
+    }
+  }
+
+  if(m.type==="package-invalidated"){
+    generated=false;
+    $("result").style.display="none";
+    $("progressCard").style.display="none";
+    $("download").style.display="none";
+    $("download").disabled=true;
+  }
+
+  if(m.type==="progress"){
+    setStep(2);
+    setProgress(m.value||0,m.label||"Working",m.message||"");
+  }
+
+  if(m.type==="status"){
+    setStatus(m.message||"Working…");
+  }
+
+  if(m.type==="multi-generated"){
+    generated=true;
+    $("generate").disabled=false;
+    $("download").disabled=false;
+    $("download").style.display="block";
+    $("result").style.display="block";
+    setStep(3);
+
+    const s=m.payload.summary,t=s.totals||{};
+    $("mScreens").textContent=s.screenCount||0;
+    $("mAssets").textContent=t.assets||0;
+    $("mPngs").textContent=t.pngAssetPreviews||0;
+    $("mSize").textContent=(m.payload.totalBytes/1024/1024).toFixed(1);
+
+    setProgress(100,"Ready","Package generated successfully");
+    setStatus("Handoff package is ready to download.","success");
+  }
+
+  if(m.type==="package-ready"){
+    try{
+      const files=m.payload.files.map(f=>({fileName:f.fileName,bytes:new Uint8Array(f.bytes)}));
+      const zip=createZip(files);
+      downloadBlob(zip,m.payload.zipName,"application/zip");
+      setStatus(`Downloaded ${m.payload.screenCount} screen${m.payload.screenCount===1?"":"s"} in one master ZIP.`,"success");
+      setProgress(100,"Downloaded","Master handoff ZIP created successfully");
+    }catch(err){
+      console.error("[Frontend Handoff Studio] ZIP error",err); setStatus("The ZIP could not be created. Reopen the plugin and try again with fewer screens.","error");
+    }finally{
+      $("download").disabled=false;
+      $("generate").disabled=false;
+    }
+  }
+
+  if(m.type==="error"){
+    $("generate").disabled=false;
+    $("download").disabled=!generated;
+    setStatus(m.message||"Something went wrong.","error");
+    setProgress(0,"Export interrupted",m.message||"Review the selected screens and export settings, then try again.");
+  }
+};
+
+function escapeHtml(value){
+  return String(value==null?"":value)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+</script>
+</body>

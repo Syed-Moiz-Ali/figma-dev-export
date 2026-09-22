@@ -1,0 +1,34 @@
+FRONTEND HANDOFF STUDIO — FULL REPOSITORY UPLOAD
+================================================
+
+This archive contains the COMPLETE public repository, including:
+
+- plugin/manifest.json
+- plugin/code.js
+- plugin/ui.html
+- README.md
+- PRIVACY.md
+- SECURITY.md
+- SUPPORT.md
+- SECURITY_DISCLOSURE.md
+- FIGMA_LISTING.md
+- REVIEW_CHECKLIST.md
+- CHANGELOG.md
+- PUBLISHING_STEPS.md
+- VERIFICATION_REPORT.md
+- docs/
+- community-assets/
+- .github/ISSUE_TEMPLATE/
+
+IMPORTANT:
+The `.github` directory is a hidden folder on some operating systems.
+Do not accidentally omit it when re-uploading.
+
+Recommended method:
+1. Unzip this archive.
+2. Clone/open your GitHub repository locally.
+3. Copy ALL contents of this folder into the repository root.
+4. Commit and push.
+
+If using GitHub's browser uploader, make sure `.github/ISSUE_TEMPLATE/`
+is present after upload.

@@ -40,3 +40,34 @@ Tagline: **Export structured multi-screen frontend handoffs with exact assets.**
 - [Security](SECURITY.md)
 - [Figma listing copy](FIGMA_LISTING.md)
 - [Review checklist](REVIEW_CHECKLIST.md)
+
+
+## Repository structure
+
+```text
+.
+├── plugin/
+│   ├── manifest.json
+│   ├── code.js
+│   ├── ui.html
+│   └── README.md
+├── community-assets/
+├── docs/
+├── .github/
+│   └── ISSUE_TEMPLATE/
+├── PRIVACY.md
+├── SECURITY.md
+├── SUPPORT.md
+├── FIGMA_LISTING.md
+└── REVIEW_CHECKLIST.md
+```
+
+## Run the plugin locally
+
+Open Figma Desktop, then:
+
+**Plugins → Development → Import plugin from manifest...**
+
+Select `plugin/manifest.json`.
+
+The source in `plugin/` is the same publication-ready build described by this repository's privacy and security documentation.
