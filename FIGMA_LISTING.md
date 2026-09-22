@@ -1,23 +1,23 @@
 # Figma Community Listing
 
 ## Name
-Frontend Handoff Studio
+Dev Export for Figma
 
 ## Tagline
-Export structured multi-screen frontend handoffs with exact assets.
+Export Figma screens as JSON, SVG, PNG, and developer-ready assets.
 
 ## Category
 Software development
 
 ## Description
-Frontend Handoff Studio turns selected Figma screens into organized, implementation-ready handoff packages for frontend developers.
+Dev Export for Figma turns selected Figma screens into organized developer export packages.
 
-Select one or multiple complete frames and export each screen into its own folder with structured layout JSON, a 2× visual preview, exact SVG assets, PNG inspection copies, raster assets, and an asset catalog. A package manifest keeps multi-screen exports easy to navigate.
+Select one or multiple complete frames and export each screen with structured layout JSON, a 2× visual preview, exact SVG assets, PNG inspection copies, raster assets, and a visual asset catalog. A package manifest keeps multi-screen exports easy to navigate.
 
 ### Highlights
-- Multi-screen export in one package
+- Multi-screen export in one ZIP
 - Structured layout and style JSON
-- Auto Layout, sizing, constraints, typography, colors, spacing, borders, radii, and effects
+- Auto Layout, sizing, constraints, typography, colors, spacing, borders, radii, effects, and referenced variables
 - Exact SVG assets plus PNG inspection copies
 - Composed SVG + PNG export for decorative vector groups
 - Original raster assets plus rendered PNG representations
@@ -27,7 +27,7 @@ Select one or multiple complete frames and export each screen into its own folde
 - No analytics or advertising
 - No external network access
 
-Frontend Handoff Studio does not provide AI chat, an MCP server, or programmatic access to Figma outside the official Plugin API. It exports files only after the user explicitly selects content and starts an export.
+The plugin does not provide an AI chat interface, MCP server, or programmatic access to Figma outside the official Plugin API. Files are created only after the user explicitly selects content and starts an export.
 
 ## Support contact
 GitHub Issues: https://github.com/Syed-Moiz-Ali/frontend-handoff-studio/issues

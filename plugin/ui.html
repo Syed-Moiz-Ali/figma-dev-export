@@ -249,8 +249,8 @@ h1,.screen-name,.option-copy strong,.metric b{color:var(--text)}
           </svg>
         </div>
         <div class="title-wrap">
-          <div class="title-row"><h1>Frontend Handoff Studio</h1><span class="version">MULTI-SCREEN</span></div>
-          <div class="subtitle">Structured screens, exact assets and implementation-ready frontend handoffs</div>
+          <div class="title-row"><h1>Dev Export for Figma</h1><span class="version">MULTI-SCREEN</span></div>
+          <div class="subtitle">Export screens, JSON, SVG, PNG, previews, and developer-ready assets</div>
           <div class="privacy-chip"><span class="privacy-dot"></span>Runs locally · No network access · No analytics</div>
         </div>
       </div>
@@ -286,7 +286,7 @@ h1,.screen-name,.option-copy strong,.metric b{color:var(--text)}
     </section>
 
     <section class="section">
-      <div class="section-head"><div class="section-title">Handoff package</div></div>
+      <div class="section-head"><div class="section-title">Export package</div></div>
       <div class="panel">
         <div class="option">
           <div class="option-icon">
@@ -415,7 +415,7 @@ h1,.screen-name,.option-copy strong,.metric b{color:var(--text)}
 
   <footer class="bottom">
     <div class="actions">
-      <button id="generate" class="primary" disabled>Generate handoff package</button>
+      <button id="generate" class="primary" disabled>Generate export package</button>
       <button id="download" class="secondary" style="display:none" disabled>Download ZIP</button>
     </div>
     <div id="status" class="status">Select one or more complete frames to begin.</div>
@@ -551,7 +551,7 @@ $("generate").onclick=()=>{
   $("result").style.display="none";
   setStep(2);
   setProgress(1,"Preparing","Validating screen selection and export settings");
-  setStatus("Generating high-fidelity multi-screen handoff…");
+  setStatus("Generating multi-screen developer export…");
 
   parent.postMessage({pluginMessage:{
     type:"generate-multi",
@@ -647,7 +647,7 @@ onmessage=e=>{
     $("mSize").textContent=(m.payload.totalBytes/1024/1024).toFixed(1);
 
     setProgress(100,"Ready","Package generated successfully");
-    setStatus("Handoff package is ready to download.","success");
+    setStatus("Export package is ready to download.","success");
   }
 
   if(m.type==="package-ready"){
@@ -656,9 +656,9 @@ onmessage=e=>{
       const zip=createZip(files);
       downloadBlob(zip,m.payload.zipName,"application/zip");
       setStatus(`Downloaded ${m.payload.screenCount} screen${m.payload.screenCount===1?"":"s"} in one master ZIP.`,"success");
-      setProgress(100,"Downloaded","Master handoff ZIP created successfully");
+      setProgress(100,"Downloaded","Developer export ZIP created successfully");
     }catch(err){
-      console.error("[Frontend Handoff Studio] ZIP error",err); setStatus("The ZIP could not be created. Reopen the plugin and try again with fewer screens.","error");
+      console.error("[Dev Export for Figma] ZIP error",err); setStatus("The ZIP could not be created. Reopen the plugin and try again with fewer screens.","error");
     }finally{
       $("download").disabled=false;
       $("generate").disabled=false;
@@ -682,3 +682,4 @@ function escapeHtml(value){
 }
 </script>
 </body>
+</html>

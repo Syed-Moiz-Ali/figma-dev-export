@@ -1,14 +1,22 @@
-# Publishing steps
+# Publishing steps — Dev Export for Figma
 
-1. In Figma Desktop, import `plugin/manifest.json` as a development plugin and run the final smoke tests.
-2. Enable two-factor authentication on the Figma account if not already enabled.
-3. In Figma Desktop: Plugins → Manage plugins → menu next to the plugin → Publish.
-4. Copy the exact name/tagline/description from `github-support-repo/FIGMA_LISTING.md`.
-5. Category: **Software development**.
-6. Upload media from `community-assets/`.
-7. Complete the Data security page using `github-support-repo/SECURITY_DISCLOSURE.md`.
-8. On final details, set the support contact to the GitHub Issues URL.
-9. Confirm Figma shows **No access to network**. If it shows Unknown, stop and verify the manifest.
-10. Submit for review.
+1. Open the **Figma desktop app**.
+2. Import `plugin/manifest.json` as a development plugin if it is not already installed.
+3. Test one-screen and multi-screen exports using the final files in this repository.
+4. Open the plugin's development menu and choose **Publish** / **Publish new release**.
+5. Use the listing information from `FIGMA_LISTING.md`.
+6. Upload:
+   - `community-assets/icon-128.png`
+   - `community-assets/thumbnail-1920x1080.png`
+   - the three carousel images
+7. Category: **Software development**
+8. Add GitHub Issues as the support contact.
+9. Add the privacy policy URL from `FIGMA_LISTING.md`.
+10. Complete Figma's security disclosure using `SECURITY_DISCLOSURE.md`.
+11. Confirm Figma shows **No access to network**.
+12. Review Figma's current Plugin and Widget Review Guidelines, Developer Terms, Creator Agreement, Community Terms, and trademark guidance.
+13. Submit for review.
 
-Figma's publishing help says Community review may take up to two weeks.
+Public name: **Dev Export for Figma**
+
+Tagline: **Export Figma screens as JSON, SVG, PNG, and developer-ready assets.**

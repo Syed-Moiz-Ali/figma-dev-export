@@ -1,4 +1,4 @@
-FRONTEND HANDOFF STUDIO — FULL REPOSITORY UPLOAD
+DEV EXPORT FOR FIGMA — FULL REPOSITORY UPLOAD
 ================================================
 
 This archive contains the COMPLETE public repository, including:
@@ -21,14 +21,7 @@ This archive contains the COMPLETE public repository, including:
 - .github/ISSUE_TEMPLATE/
 
 IMPORTANT:
-The `.github` directory is a hidden folder on some operating systems.
-Do not accidentally omit it when re-uploading.
+The `.github` directory is hidden on some operating systems.
+Make sure it remains in the repository after upload.
 
-Recommended method:
-1. Unzip this archive.
-2. Clone/open your GitHub repository locally.
-3. Copy ALL contents of this folder into the repository root.
-4. Commit and push.
-
-If using GitHub's browser uploader, make sure `.github/ISSUE_TEMPLATE/`
-is present after upload.
+Upload the CONTENTS of the `dev-export-for-figma` folder to the repository root.

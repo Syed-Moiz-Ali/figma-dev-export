@@ -1,12 +1,18 @@
-# Publication Build Verification
+# Verification report — Dev Export for Figma
 
-- code.js syntax: PASS 
-- ui.html script syntax: PASS 
-- network_access_none: PASS
-- no_fetch: PASS
-- no_xmlhttprequest: PASS
-- no_websocket: PASS
-- no_client_storage: PASS
-- no_browser_storage: PASS
-- no_textencoder_constructor: PASS
-- no_ai_branding: PASS
+Final publication-ready rebrand verification.
+
+## Checks
+- ✅ product name
+- ✅ networkAccess none
+- ✅ old product name absent
+- ✅ old schema prefix absent from plugin
+- ✅ AI summary identifier removed
+- ✅ ChatGPT/Codex/Claude absent
+- ✅ new TextEncoder absent
+- ✅ fetch absent
+- ✅ XMLHttpRequest absent
+- ✅ WebSocket absent
+- ✅ issue templates
+- ✅ code.js syntax
+- ✅ ui.html JS syntax

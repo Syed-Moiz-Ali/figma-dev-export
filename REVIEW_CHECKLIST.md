@@ -46,7 +46,7 @@ Source: Figma Plugin and Widget Review Guidelines and classic plugin publishing 
 - [ ] No background process remains after plugin closes
 
 ## Community listing
-- [ ] Name: Frontend Handoff Studio
+- [ ] Name: Dev Export for Figma
 - [ ] Tagline added
 - [ ] Category: Software development
 - [ ] 128×128 icon uploaded

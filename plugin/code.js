@@ -1,7 +1,7 @@
 figma.showUI(__html__, {
   width: 560,
   height: 800,
-  title: "Frontend Handoff Studio",
+  title: "Dev Export for Figma",
   themeColors: true
 });
 
@@ -11,7 +11,7 @@ const COMPOSABLE_CONTAINER_TYPES = new Set(["FRAME", "GROUP"]);
 const VECTORISH_LEAF_TYPES = new Set(["VECTOR", "BOOLEAN_OPERATION", "STAR", "POLYGON", "ELLIPSE", "LINE", "RECTANGLE"]);
 const COMPOSE_NAME_HINT = /(svg|vector|connector|hairline|illustration|artwork|graphic|decoration|decorative|ornament|pattern|mesh|logo|brand mark)/i;
 let latestPackageFiles = [];
-let latestPackageName = "figma-multi-screen-handoff.zip";
+let latestPackageName = "figma-dev-export.zip";
 let latestPackageSummary = null;
 
 function cleanValue(value, depth = 0) {
@@ -631,7 +631,7 @@ function buildAssetIndex(assetManifest) {
   return { byNodeId, byRole, composed };
 }
 
-function buildAISummary(nodes, assetManifest, source, options) {
+function buildDeveloperSummary(nodes, assetManifest, source, options) {
   const types = new Map();
   const colors = new Map();
   const fonts = new Map();
@@ -748,9 +748,9 @@ function buildAISummary(nodes, assetManifest, source, options) {
         exportError:x.exportError
       }))
     },
-    frontendHandoff: {
+    developerExport: {
       target: "Responsive frontend implementation",
-      readOrder: ["aiSummary", "assetIndex", "nodes"],
+      readOrder: ["developerSummary", "assetIndex", "nodes"],
       visualReference: "Use the exported 2× PNG as the final visual reference.",
       layoutRule: "Translate Auto Layout, FILL/HUG sizing, constraints and wrapping into the responsive layout primitives of the target framework instead of defaulting to absolute positioning.",
       assetRule: "Prefer SVG for implementation fidelity; use the matching PNG copy for quick visual inspection and QA. Prefer composed SVGs for decorative multi-vector groups.",
@@ -981,7 +981,7 @@ async function serializeNode(node, options, ctx, depth = 0) {
     "explicitVariableModes"
   ]);
 
-  // Figma-generated CSS snapshot. Helpful for AI/code reconstruction,
+  // Figma-generated CSS snapshot. Helpful for frontend/code reconstruction,
   // but optional because it adds time on large frames.
   if (options.includeCSS && typeof node.getCSSAsync === "function") {
     try {
@@ -1192,15 +1192,15 @@ async function buildScreenExport(node, options, packageContext) {
   const nodes = [serialized];
   const assetManifest = Array.from(ctx.assetManifestByRef.values());
   const assetFiles = Array.from(ctx.assetFilesByRef.values());
-  const aiSummary = buildAISummary(nodes, assetManifest, source, options);
+  const developerSummary = buildDeveloperSummary(nodes, assetManifest, source, options);
   const assetIndex = buildAssetIndex(assetManifest);
 
   const design = {
-    schema: "frontend-handoff-screen-export",
+    schema: "dev-export-screen",
     schemaVersion: "1.0.0",
     generatedAt: new Date().toISOString(),
     packageContext: {
-      packageSchema: "frontend-handoff-multiscreen-package",
+      packageSchema: "dev-export-multiscreen-package",
       packageSchemaVersion: "1.0.0",
       screenIndex: packageContext.screenIndex,
       totalScreens: packageContext.totalScreens,
@@ -1209,16 +1209,16 @@ async function buildScreenExport(node, options, packageContext) {
     },
     source,
     guidance: {
-      purpose: "High-fidelity Figma handoff for frontend implementation across web, mobile and desktop UI frameworks.",
+      purpose: "High-fidelity Figma design export for frontend implementation across web, mobile and desktop UI frameworks.",
       coordinateSystem: "x/y are relative to the immediate parent; absoluteBoundingBox is page-space when available.",
       layerOrder: "children are preserved in Figma layer order (back-to-front).",
       mixedValueMarker: "__MIXED__",
       assetStrategy: "Asset paths in this JSON are relative to this screen folder. Prefer composed SVGs for decorative groups and individual SVGs for reusable icons.",
-      implementationNote: "Read aiSummary first, then assetIndex, then nodes. Use the exported PNG as the final visual reference."
+      implementationNote: "Read developerSummary first, then assetIndex, then nodes. Use the exported PNG as the final visual reference."
     },
-    aiSummary,
+    developerSummary,
     assetIndex,
-    warnings: aiSummary.warnings,
+    warnings: developerSummary.warnings,
     assetManifest,
     variableCollections: variableData.collections,
     variables: variableData.variables,
@@ -1236,7 +1236,7 @@ async function buildScreenExport(node, options, packageContext) {
 
 function createAssetsManifest(screen, result) {
   return {
-    schema: "frontend-handoff-assets",
+    schema: "dev-export-assets",
     schemaVersion: "1.0.0",
     generatedAt: new Date().toISOString(),
     screen: {
@@ -1247,19 +1247,19 @@ function createAssetsManifest(screen, result) {
   };
 }
 
-function packageHandoffText(packageManifest) {
+function packageExportGuide(packageManifest) {
   const lines = [
-    "FRONTEND HANDOFF STUDIO — MULTI-SCREEN PACKAGE",
+    "DEV EXPORT FOR FIGMA — MULTI-SCREEN PACKAGE",
     "===============================================",
     "",
-    "This package was generated by Frontend Handoff Studio.",
+    "This package was generated by Dev Export for Figma.",
     "",
     "IMPLEMENTATION READ ORDER",
     "-------------------------",
     "1. Read package-manifest.json to understand all exported screens.",
     "2. Work one screen folder at a time under screens/.",
     "3. For each screen JSON, read:",
-    "   aiSummary -> assetIndex -> nodes.",
+    "   developerSummary -> assetIndex -> nodes.",
     "4. Use the screen @2x PNG as the visual reference.",
     "5. Use exact assets from that screen's assets/ folder.",
     "6. Prefer composed SVG assets for multi-vector decorative graphics.",
@@ -1396,7 +1396,7 @@ h3{font-size:13px;margin:10px 0 5px;white-space:nowrap;overflow:hidden;text-over
 </head>
 <body>
 <header>
-  <div class="eyebrow">Frontend Handoff · Asset Catalog</div>
+  <div class="eyebrow">Dev Export · Asset Catalog</div>
   <h1>${htmlEscape(screenName)}</h1>
   <p>${manifest.length} exported asset${manifest.length === 1 ? "" : "s"} · SVG + PNG inspection views where available</p>
 </header>
@@ -1418,7 +1418,7 @@ async function buildMultiScreenPackage(options) {
 
   const generatedAt = new Date().toISOString();
   const packageBase = safeFileName(figma.root.name || "Figma");
-  const packageRoot = `${packageBase}_MultiScreen_Handoff`;
+  const packageRoot = `${packageBase}_Dev_Export`;
 
   const files = [];
   const entries = [];
@@ -1562,7 +1562,7 @@ async function buildMultiScreenPackage(options) {
   }
 
   const packageManifest = {
-    schema: "frontend-handoff-multiscreen-package",
+    schema: "dev-export-multiscreen-package",
     schemaVersion: "1.0.0",
     generatedAt,
     source: {
@@ -1579,7 +1579,7 @@ async function buildMultiScreenPackage(options) {
     totals,
     recommendedReadOrder: [
       "package-manifest.json",
-      "screens/<screen>/<screen>.json -> aiSummary",
+      "screens/<screen>/<screen>.json -> developerSummary",
       "screens/<screen>/<screen>.json -> assetIndex",
       "screens/<screen>/<screen>.json -> nodes",
       "screens/<screen>/<screen>@2x.png",
@@ -1597,16 +1597,16 @@ async function buildMultiScreenPackage(options) {
   });
 
   files.splice(1, 0, {
-    fileName: "IMPLEMENTATION_HANDOFF.txt",
+    fileName: "IMPLEMENTATION_GUIDE.txt",
     mime: "text/plain",
-    bytes: utf8Encode(packageHandoffText(packageManifest))
+    bytes: utf8Encode(packageExportGuide(packageManifest))
   });
 
   figma.ui.postMessage({
     type: "progress",
     value: 96,
     label: "Finalizing",
-    message: "Building package manifest and handoff index"
+    message: "Building package manifest and implementation guide"
   });
 
   const packageBytes = files.reduce((sum, file) => sum + (file.bytes ? file.bytes.length : 0), 0);
@@ -1653,7 +1653,7 @@ function friendlyUserError(error) {
   if (code === "SCREEN_LIMIT") return "Export up to 20 screens at a time to keep Figma responsive. Split larger selections into smaller batches.";
   if (code === "PREVIEW_UNAVAILABLE") return "A selected screen could not be rendered as a PNG preview. Turn off Screen previews and try again.";
   if (code === "HIDDEN_SCREEN") return "One selected screen is hidden. Make it visible or enable hidden layers, then try again.";
-  if (code === "PACKAGE_NOT_READY") return "Generate the handoff package before downloading it.";
+  if (code === "PACKAGE_NOT_READY") return "Generate the export package before downloading it.";
   if (code === "PACKAGE_TOO_LARGE") return "This export is too large to package safely in one run. Export fewer screens or reduce the asset budget.";
   return "The export could not be completed. Try again with fewer screens, a smaller asset budget, or adjusted Advanced options.";
 }
@@ -1699,7 +1699,7 @@ figma.ui.onmessage = async (msg) => {
         type: "progress",
         value: 100,
         label: "Ready",
-        message: "Multi-screen handoff package is ready to download"
+        message: "Multi-screen export package is ready to download"
       });
 
       figma.ui.postMessage({
@@ -1732,7 +1732,7 @@ figma.ui.onmessage = async (msg) => {
       figma.closePlugin();
     }
   } catch (error) {
-    console.error("[Frontend Handoff Studio] Export error", error);
+    console.error("[Dev Export for Figma] Export error", error);
     figma.ui.postMessage({
       type: "error",
       message: friendlyUserError(error)

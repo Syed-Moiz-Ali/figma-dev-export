@@ -1,6 +1,6 @@
 # Plugin source
 
-This folder contains the publish-ready source for **Frontend Handoff Studio**.
+This folder contains the publish-ready source for **Dev Export for Figma**.
 
 ## Files
 
@@ -14,7 +14,7 @@ This folder contains the publish-ready source for **Frontend Handoff Studio**.
 2. Open a Figma Design file.
 3. Go to **Plugins → Development → Import plugin from manifest...**
 4. Select `plugin/manifest.json`.
-5. Run **Frontend Handoff Studio** from Development plugins.
+5. Run **Dev Export for Figma** from Development plugins.
 
 ## Privacy / network
 

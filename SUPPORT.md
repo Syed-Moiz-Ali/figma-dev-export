@@ -1,6 +1,6 @@
 # Support
 
-Thanks for using Frontend Handoff Studio.
+Thanks for using Dev Export for Figma.
 
 ## Where to ask for help
 
@@ -15,7 +15,7 @@ Before opening an issue:
 
 ## What to include in a bug report
 
-- Figma desktop operating system (Windows/macOS)
+- Figma desktop operating system
 - Approximate number of selected screens
 - Approximate layer count if known
 - Export settings used

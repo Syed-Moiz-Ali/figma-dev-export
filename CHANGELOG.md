@@ -2,10 +2,11 @@
 
 ## 1.0.0 — Initial Community submission
 
-- Multi-screen structured handoff export
+- Public product name: **Dev Export for Figma**
+- Multi-screen structured developer export
 - SVG + PNG vector assets
-- composed decorative graphics
-- original + rendered raster assets
-- screen previews and asset catalogs
-- privacy-first no-network architecture
-- light/dark Figma-native UI
+- Composed decorative graphics
+- Original + rendered raster assets
+- Screen previews and visual asset catalogs
+- Privacy-first no-network architecture
+- Light/dark Figma-native UI
