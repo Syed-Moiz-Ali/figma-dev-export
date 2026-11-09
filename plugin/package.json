@@ -1,0 +1,9 @@
+{
+  "name": "dev-export-figma-plugin",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build the Figma plugin bundle from src modules",
+  "scripts": {
+    "build": "node build.js"
+  }
+}

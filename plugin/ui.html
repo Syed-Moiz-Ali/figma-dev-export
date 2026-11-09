@@ -135,6 +135,20 @@ button,input{font:inherit}
 }
 .preset:hover{color:var(--text)}
 .preset.active{background:var(--accent);color:#fff;box-shadow:0 4px 10px rgba(51,88,244,.22)}
+.output-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.select-pill{
+  display:inline-flex;align-items:center;gap:5px;height:27px;padding:0 5px 0 9px;
+  border:1px solid var(--line);border-radius:999px;background:var(--surface-2);
+  color:var(--muted);font-size:8px;font-weight:700;white-space:nowrap
+}
+.select-pill select{
+  border:0;background:var(--surface-2);color:var(--text);font-size:8.5px;font-weight:700;
+  outline:none;cursor:pointer;padding:0 2px;max-width:92px;border-radius:999px
+}
+.select-pill option,select option{background:var(--surface);color:var(--text)}
+.select-pill select:disabled{opacity:.45;cursor:default}
+.verify-toggle{display:inline-flex;align-items:center;gap:5px;font-size:8px;color:var(--muted);font-weight:700;cursor:pointer}
+.verify-toggle input{accent-color:var(--accent);width:13px;height:13px}
 
 .settings{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;padding:16px 26px 10px;overflow:hidden}
 .settings-col{min-height:0;display:flex;flex-direction:column;padding:0 22px}
@@ -173,6 +187,15 @@ button,input{font:inherit}
 }
 .number-input::-webkit-outer-spin-button,.number-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .number-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.code-select{
+  height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);color:var(--text);font-size:9.5px;font-weight:700;outline:none;cursor:pointer
+}
+.code-select option{background:var(--surface);color:var(--text)}
+.info-pill{
+  flex:none;padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);
+  font-size:7.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase
+}
 
 /* Action bar */
 .footer{flex:none;position:relative;background:var(--surface);border-top:1px solid var(--line)}
@@ -269,10 +292,18 @@ button,input{font:inherit}
           <button class="preset" data-preset="full">Full quality</button>
           <button class="preset" data-preset="json">JSON only</button>
         </div>
+        <div class="output-controls">
+          <label class="select-pill">Output
+            <select id="outputMode">
+              <option value="design" selected>Design</option>
+              <option value="code">Code</option>
+            </select>
+          </label>
+        </div>
       </div>
     </header>
 
-    <section class="settings">
+    <section id="designSettings" class="settings">
       <div class="settings-col">
         <div class="col-head">
           <h2>Contents</h2>
@@ -352,6 +383,75 @@ button,input{font:inherit}
             <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 6h14v12H5z"/><path d="M9 10h6"/></svg></span>
             <span class="row-text"><span class="row-title">Asset budget</span><span class="row-desc">Per screen, including PNG copies (MB)</span></span>
             <input id="maxAssetMB" class="number-input" type="number" min="5" max="150" step="5" value="40">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="codeSettings" class="settings code-settings" style="display:none">
+      <div class="settings-col">
+        <div class="col-head">
+          <h2>Code output</h2>
+          <p>One screen per logical screen, with state and tab variants.</p>
+        </div>
+        <div class="rows">
+          <div class="row static">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></svg></span>
+            <span class="row-text"><span class="row-title">Target framework</span><span class="row-desc">Choose the target framework</span></span>
+            <select id="targetFramework" class="code-select">
+              <option value="flutter" selected>Flutter</option>
+              <option value="react">React</option>
+              <option value="html-css">HTML/CSS</option>
+            </select>
+          </div>
+          <label class="row">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 7h10v10H7z"/><path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6"/></svg></span>
+            <span class="row-text"><span class="row-title">Centralized UI</span><span class="row-desc">Components, core and colors files</span></span>
+            <span class="switch"><input id="centralizedUi" type="checkbox" checked><span class="slider"></span></span>
+          </label>
+          <label class="row">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4z"/><path d="m8 12 2.5 2.5L16 9"/></svg></span>
+            <span class="row-text"><span class="row-title">Verification harness</span><span class="row-desc">Expected previews + golden/visual diff</span></span>
+            <span class="switch"><input id="verifyHarness" type="checkbox" checked><span class="slider"></span></span>
+          </label>
+          <div class="row static">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/><path d="M13.5 6.5h7M3.5 17.5h7"/></svg></span>
+            <span class="row-text"><span class="row-title">State & tab variants</span><span class="row-desc">Loading/data/error/tabs stay one screen</span></span>
+            <span class="info-pill">Dynamic</span>
+          </div>
+          <div class="row static">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+            <span class="row-text"><span class="row-title">Routing</span><span class="row-desc">Named routes + screen & variant gallery</span></span>
+            <span class="info-pill">Included</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-col">
+        <div class="col-head">
+          <h2>Included automatically</h2>
+          <p>The design JSON stays in the ZIP as the source of truth for the code.</p>
+        </div>
+        <div class="rows">
+          <div class="row static centralized-only">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 7h10v10H7z"/><path d="M4 10V4h6M14 4h6v6M20 14v6h-6M10 20H4v-6"/></svg></span>
+            <span class="row-text"><span class="row-title">Centralized components</span><span class="row-desc">Shared widgets with text props</span></span>
+            <span class="info-pill">Shared</span>
+          </div>
+          <div class="row static">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 16l4-4 3 3 5-6 4 5"/><rect x="3" y="4" width="18" height="16" rx="3"/></svg></span>
+            <span class="row-text"><span class="row-title">Exact assets</span><span class="row-desc">SVG, PNG and raster files copied in</span></span>
+            <span class="info-pill">Assets</span>
+          </div>
+          <div class="row static centralized-only">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span>
+            <span class="row-text"><span class="row-title">Tokens & fonts</span><span class="row-desc">Colors, type, spacing, radii and shadows</span></span>
+            <span class="info-pill">Theme</span>
+          </div>
+          <div class="row static">
+            <span class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 5h14v14H5z"/><path d="M8 9h8M8 13h8"/></svg></span>
+            <span class="row-text"><span class="row-title">Golden previews</span><span class="row-desc">Pixel comparison for every variant</span></span>
+            <span class="info-pill">QA</span>
           </div>
         </div>
       </div>
@@ -564,8 +664,28 @@ document.querySelectorAll(".preset").forEach(btn=>{
   btn.onclick=()=>applyPreset(btn.dataset.preset);
 });
 
+function syncOutputControls(){
+  const isCode=$("outputMode").value==="code";
+  $("designSettings").style.display=isCode?"none":"grid";
+  $("codeSettings").style.display=isCode?"grid":"none";
+  const presets=document.querySelector(".presets");
+  if(presets) presets.style.display=isCode?"none":"flex";
+  if(!selectedCount) setStatus(isCode?"Code mode — choose a target and generate.":"Design mode — choose export options.");
+}
+$("outputMode").onchange=syncOutputControls;
+syncOutputControls();
+
+function syncCentralized(){
+  const on=$("centralizedUi").checked;
+  document.querySelectorAll(".centralized-only").forEach(el=>{ el.style.display=on?"":"none"; });
+}
+$("centralizedUi").onchange=syncCentralized;
+syncCentralized();
+
 function runGenerate(){
   if(!selectedCount){setStatus("Select at least one complete frame first.","error");return}
+  const outputMode=$("outputMode").value;
+  const codeMode=outputMode==="code";
   generated=false;
   working=true;
   $("generate").disabled=true;
@@ -575,14 +695,18 @@ function runGenerate(){
   parent.postMessage({pluginMessage:{
     type:"generate-multi",
     options:{
-      resolveVariables:$("resolveVariables").checked,
-      collectSvg:$("collectSvg").checked,
-      collectComposedSvg:$("collectComposedSvg").checked,
-      collectImages:$("collectImages").checked,
-      collectAssetPng:$("collectAssetPng").checked,
+      resolveVariables:codeMode?true:$("resolveVariables").checked,
+      collectSvg:codeMode?true:$("collectSvg").checked,
+      collectComposedSvg:codeMode?true:$("collectComposedSvg").checked,
+      collectImages:codeMode?true:$("collectImages").checked,
+      collectAssetPng:codeMode?true:$("collectAssetPng").checked,
       assetPngScale,
-      sharedAssets:$("sharedAssets").checked,
-      includePreview:$("includePreview").checked,
+      sharedAssets:codeMode?true:$("sharedAssets").checked,
+      verifyHarness:codeMode?$("verifyHarness").checked:false,
+      centralizedUi:codeMode?$("centralizedUi").checked:true,
+      outputMode,
+      target:$("targetFramework").value,
+      includePreview:codeMode?true:$("includePreview").checked,
       embedSvgInJson:$("embedSvgInJson").checked,
       includeCSS:$("includeCSS").checked,
       includeHidden:$("includeHidden").checked,
@@ -664,9 +788,11 @@ onmessage=async e=>{
     const s=m.payload.summary,t=s.totals||{};
     const screens=s.screenCount||0;
     const sharedCount=(s.sharedAssets&&s.sharedAssets.assetCount)||0;
+    const componentCount=(s.centralUi&&s.centralUi.componentCount)||0;
+    const codeInfo=s.codeGeneration&&s.codeGeneration.enabled?s.codeGeneration:null;
     const mb=(m.payload.totalBytes/1024/1024).toFixed(1);
-    $("doneSummary").textContent=`${screens} screen${screens===1?"":"s"} · ${t.assets||0} assets · ${t.pngAssetPreviews||0} PNGs${sharedCount?` · ${sharedCount} shared`:""} · ${mb} MB`;
-    setStatus("Package ready — download the ZIP.","success");
+    $("doneSummary").textContent=`${screens} screen${screens===1?"":"s"} · ${t.assets||0} assets${componentCount?` · ${componentCount} components`:""}${sharedCount?` · ${sharedCount} shared`:""}${codeInfo?` · ${codeInfo.target} code`:""} · ${mb} MB`;
+    setStatus(codeInfo?`Package ready with ${codeInfo.target} starter code — download the ZIP.`:"Package ready — download the ZIP.","success");
   }
 
   if(m.type==="package-ready"){

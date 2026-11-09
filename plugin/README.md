@@ -5,8 +5,30 @@ This folder contains the publish-ready source for **Dev Export for Figma**.
 ## Files
 
 - `manifest.json` — Figma plugin manifest
-- `code.js` — Figma plugin sandbox logic
+- `code.js` — generated plugin bundle loaded by Figma (do not edit directly)
 - `ui.html` — plugin UI and local ZIP generation
+- `src/` — readable source modules
+- `build.js` — concatenates `src/*.js` into `code.js`
+
+## Build
+
+Figma loads a single plugin script, so the source is concatenated:
+
+```bash
+cd plugin
+node build.js
+```
+
+Source order is defined in `build.js`:
+
+- `20-assets.js`
+- `30-serialize.js`
+- `40-central.js`
+- `50-guides.js`
+- `55-phase2-tokens.js`
+- `65-phase3-verify.js`
+- `68-flutter-template.js`\n- `70-phase4-codegen.js`
+- `90-core-main.js`
 
 ## Local development install
 
