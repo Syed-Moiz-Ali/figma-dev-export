@@ -101,6 +101,7 @@ function pickAssetForNode(node, target) {
 
 function buildComponentDefinitions(centralUi, screenRecords, nodeMap, target) {
   const definitions = new Map();
+  const defaultFontFamily = centralUi.tokens.typography.length ? centralUi.tokens.typography[0].fontFamily : undefined;
 
   for (const component of centralUi.components) {
     const sample = component.sample;
@@ -117,6 +118,7 @@ function buildComponentDefinitions(centralUi, screenRecords, nodeMap, target) {
       screenFolder: found.record.screenFolder,
       componentsById: definitions,
       isComponentDefinition: true,
+      defaultFontFamily,
       textProps
     };
 
@@ -176,12 +178,20 @@ function buildCodePlan(node, context, parentNode) {
   }
 
   if (node.text) {
+    let textCss = node.css;
+    if (context.defaultFontFamily && textCss && textCss.typography && !textCss.typography.fontFamily) {
+      textCss = Object.assign({}, textCss, {
+        typography: Object.assign({}, textCss.typography, { fontFamily: context.defaultFontFamily })
+      });
+    }
     return {
       kind: "text",
       text: node.text.characters || "",
       textProp: context.textProps ? context.textProps.get(node.id) : undefined,
-      css: node.css,
+      css: textCss,
       path: node.path,
+      x: node.x,
+      y: node.y,
       width: node.width,
       height: node.height
     };
@@ -194,6 +204,8 @@ function buildCodePlan(node, context, parentNode) {
       asset,
       css: node.css,
       path: node.path,
+      x: node.x,
+      y: node.y,
       width: node.width,
       height: node.height
     };
@@ -614,6 +626,7 @@ function createReactCode(target, screenPlans, assetFiles, tokenArtifacts, genera
 
 function createScreenPlans(screenRecords, centralUi, target, logicalScreens, centralizedUi) {
   const nodeMap = collectNodeMap(screenRecords);
+  const defaultFontFamily = centralUi.tokens.typography.length ? centralUi.tokens.typography[0].fontFamily : undefined;
   const components = centralizedUi === false
     ? new Map()
     : buildComponentDefinitions(centralUi, screenRecords, nodeMap, target);
@@ -639,6 +652,7 @@ function createScreenPlans(screenRecords, centralUi, target, logicalScreens, cen
         screenFolder: record.screenFolder,
         componentsById: components,
         isComponentDefinition: false,
+        defaultFontFamily,
         textProps: null
       };
       const plan = buildCodePlan(root, context);
@@ -969,6 +983,15 @@ function flutterAlignment(css, axis) {
   return map[layout.alignItems];
 }
 
+function flutterTextAlignment(typography) {
+  const horizontal = typography && typography.textAlign ? typography.textAlign : "left";
+  const vertical = typography && typography.verticalAlign ? typography.verticalAlign : "top";
+  const h = horizontal === "center" ? "center" : horizontal === "right" ? "right" : "left";
+  const v = vertical === "center" ? "center" : vertical === "bottom" ? "bottom" : "top";
+  if (v === "center" && h === "center") return "Alignment.center";
+  return `Alignment.${v}${h.charAt(0).toUpperCase() + h.slice(1)}`;
+}
+
 function flutterWrapAlignment(css) {
   const layout = (css && css.layout) || {};
   const map = {
@@ -1009,12 +1032,7 @@ function renderFlutterPlan(plan, context, indent, textOverrides) {
     const width = flutterSizeValue(layout.width, plan.width);
     const height = flutterSizeValue(layout.height, plan.height);
     if (width || height) {
-      const vertical = typography.verticalAlign;
-      const alignment = vertical === "center"
-        ? "Alignment.centerLeft"
-        : vertical === "bottom"
-          ? "Alignment.bottomLeft"
-          : "Alignment.topLeft";
+      const alignment = flutterTextAlignment(typography);
       const sizedChild = height ? `Align(alignment: ${alignment}, child: ${widget})` : widget;
       widget = `SizedBox(${width ? `width: ${width}, ` : ""}${height ? `height: ${height}, ` : ""}child: ${sizedChild})`;
     }
@@ -1152,12 +1170,7 @@ function renderFlutterAbsolutePlan(plan, context, indent, textOverrides) {
     const textWidget = `Text(${value}${textAlign ? `, textAlign: ${textAlign}` : ""}, style: ${cssTextStyleToDart(plan.css)})`;
     let widget = textWidget;
     if (width || height) {
-      const vertical = typography.verticalAlign;
-      const alignment = vertical === "center"
-        ? "Alignment.centerLeft"
-        : vertical === "bottom"
-          ? "Alignment.bottomLeft"
-          : "Alignment.topLeft";
+      const alignment = flutterTextAlignment(typography);
       widget = `SizedBox(${width ? `width: ${width}, ` : ""}${height ? `height: ${height}, ` : ""}child: Align(alignment: ${alignment}, child: ${textWidget}))`;
     }
     return `${pad}${applyFlutterVisual(widget, plan.css)}`;
