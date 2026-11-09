@@ -1,6 +1,6 @@
 figma.showUI(__html__, {
-  width: 560,
-  height: 800,
+  width: 1080,
+  height: 600,
   title: "Dev Export for Figma",
   themeColors: true
 });
@@ -13,6 +13,12 @@ const COMPOSE_NAME_HINT = /(svg|vector|connector|hairline|illustration|artwork|g
 let latestPackageFiles = [];
 let latestPackageName = "figma-dev-export.zip";
 let latestPackageSummary = null;
+
+// Let Figma process canvas events and keep the UI responsive during long exports.
+const YIELD_EVERY_NODES = 35;
+function yieldToFigma() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 function cleanValue(value, depth = 0) {
   if (depth > 12) return "[MAX_DEPTH]";
@@ -793,6 +799,15 @@ async function serializeNode(node, options, ctx, depth = 0) {
     throw new Error("NODE_LIMIT");
   }
 
+  // Periodically give Figma a chance to handle canvas input so the export
+  // keeps running in the background instead of locking the editor.
+  if (ctx.count % YIELD_EVERY_NODES === 0) {
+    await yieldToFigma();
+    if (ctx.onProgress) {
+      try { ctx.onProgress(ctx.count); } catch (_) {}
+    }
+  }
+
   const out = {
     id: node.id,
     name: node.name,
@@ -1010,8 +1025,11 @@ async function serializeNode(node, options, ctx, depth = 0) {
 async function resolveVariables(variableIds) {
   const variables = {};
   const collections = {};
+  let resolved = 0;
 
   for (const id of variableIds) {
+    resolved += 1;
+    if (resolved % 50 === 0) await yieldToFigma();
     try {
       const variable = await figma.variables.getVariableByIdAsync(id);
       if (!variable) continue;
@@ -1085,6 +1103,15 @@ function visualPosition(node) {
   };
 }
 
+function topLevelScreens() {
+  return Array.from(figma.currentPage.children || []).filter((node) =>
+    node.type === "FRAME" ||
+    node.type === "SECTION" ||
+    node.type === "COMPONENT" ||
+    node.type === "COMPONENT_SET"
+  );
+}
+
 function effectiveScreenSelection() {
   const raw = Array.from(figma.currentPage.selection || []);
   if (!raw.length) return [];
@@ -1122,7 +1149,8 @@ function selectionSummary() {
     rawCount: raw.length,
     count: nodes.length,
     nestedSelectionsIgnored: Math.max(0, raw.length - nodes.length),
-    items: nodes.slice(0, 30).map((n, i) => ({
+    pageFrameCount: topLevelScreens().length,
+    items: nodes.map((n, i) => ({
       index: i + 1,
       id: n.id,
       name: n.name,
@@ -1133,7 +1161,7 @@ function selectionSummary() {
   };
 }
 
-function createScreenContext() {
+function createScreenContext(onProgress) {
   return {
     count: 0,
     variableIds: new Set(),
@@ -1141,7 +1169,8 @@ function createScreenContext() {
     assetFilesByRef: new Map(),
     rasterRefByHash: new Map(),
     rasterSequence: 1,
-    assetBytes: 0
+    assetBytes: 0,
+    onProgress: typeof onProgress === "function" ? onProgress : null
   };
 }
 
@@ -1160,7 +1189,16 @@ async function exportNodePng(node, scale) {
 }
 
 async function buildScreenExport(node, options, packageContext) {
-  const ctx = createScreenContext();
+  let lastProgressAt = 0;
+  const ctx = createScreenContext((count) => {
+    const now = Date.now();
+    if (now - lastProgressAt < 700) return;
+    lastProgressAt = now;
+    figma.ui.postMessage({
+      type: "status",
+      message: `Screen ${packageContext.screenIndex} of ${packageContext.totalScreens} · reading ${count.toLocaleString()} layers — you can keep working in Figma`
+    });
+  });
   const serialized = await serializeNode(node, options, ctx, 0);
 
   if (!serialized) {
@@ -1179,10 +1217,9 @@ async function buildScreenExport(node, options, packageContext) {
   const source = {
     editorType: figma.editorType,
     fileName: figma.root.name,
-    page: {
-      id: figma.currentPage.id,
-      name: figma.currentPage.name
-    },
+    page: packageContext.page
+      ? { id: packageContext.page.id, name: packageContext.page.name }
+      : { id: figma.currentPage.id, name: figma.currentPage.name },
     selectedNodeCount: 1,
     serializedNodeCount: ctx.count,
     screenNodeId: node.id,
@@ -1247,6 +1284,366 @@ function createAssetsManifest(screen, result) {
   };
 }
 
+function hashAssetBytes(bytes) {
+  let h1 = 0x811c9dc5 >>> 0;
+  let h2 = 0x9e3779b9 >>> 0;
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    h1 = Math.imul(h1 ^ b, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ b, 0x85ebca6b) >>> 0;
+  }
+  const hex = (n) => (n >>> 0).toString(16).padStart(8, "0");
+  return hex(h1) + hex(h2);
+}
+
+function assetContentHash(mime, bytes) {
+  if (mime !== "image/svg+xml") return hashAssetBytes(bytes);
+  try {
+    // Figma SVG exports can include volatile element ids from each node.
+    // Normalize them so the same icon reused on another screen still dedupes.
+    const normalized = utf8Decode(bytes)
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/\s+id="[^"]*"/g, "")
+      .replace(/\s+data-[a-zA-Z0-9-]+="[^"]*"/g, "")
+      .replace(/>\s+</g, "><")
+      .trim();
+    return hashAssetBytes(utf8Encode(normalized));
+  } catch (_) {
+    return hashAssetBytes(bytes);
+  }
+}
+
+function assetFileExtension(fileName, mime) {
+  const match = String(fileName || "").match(/\.([a-zA-Z0-9]+)$/);
+  if (match) return match[1].toLowerCase();
+  if (mime === "image/svg+xml") return "svg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/webp") return "webp";
+  if (mime === "image/gif") return "gif";
+  return "bin";
+}
+
+function sharedAssetFolder(kind, mime) {
+  if (mime === "image/svg+xml") {
+    return kind === "composed-svg" ? "composed" : "svg";
+  }
+  if (mime === "image/png") return "png";
+  return "images";
+}
+
+function findAssetEntriesForFile(assetManifest, fileName) {
+  const entries = [];
+  for (const asset of assetManifest || []) {
+    let matches = asset.fileName === fileName || asset.pngFileName === fileName;
+    if (!matches && asset.formats) {
+      matches = Object.values(asset.formats).some((p) => p === fileName);
+    }
+    if (matches) entries.push(asset);
+  }
+  return entries;
+}
+
+function collectAssetUsages(design) {
+  const byRef = new Map();
+
+  function addUsage(ref, node, path, usage, extra) {
+    if (!ref) return;
+    if (!byRef.has(ref)) byRef.set(ref, []);
+    byRef.get(ref).push({
+      nodeId: node.id,
+      nodeName: node.name,
+      nodeType: node.type,
+      layerPath: path,
+      usage,
+      x: typeof node.x === "number" ? node.x : undefined,
+      y: typeof node.y === "number" ? node.y : undefined,
+      width: typeof node.width === "number" ? node.width : undefined,
+      height: typeof node.height === "number" ? node.height : undefined,
+      ...extra
+    });
+  }
+
+  function visit(node, parentPath) {
+    if (!node) return;
+    const path = parentPath
+      ? `${parentPath} / ${node.name || node.type}`
+      : String(node.name || node.type || "Screen");
+
+    if (node.vectorAsset && node.vectorAsset.ref) {
+      addUsage(node.vectorAsset.ref, node, path, "vector");
+    }
+    if (node.composedVectorAsset && node.composedVectorAsset.ref) {
+      addUsage(node.composedVectorAsset.ref, node, path, "composed-graphic");
+    }
+    if (Array.isArray(node.imageAssets)) {
+      for (const image of node.imageAssets) {
+        addUsage(image.ref, node, path, "image-fill", {
+          fillIndex: image.fillIndex,
+          imageHash: image.imageHash
+        });
+      }
+    }
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) visit(child, path);
+    }
+  }
+
+  for (const root of design.nodes || []) visit(root, "");
+  return byRef;
+}
+
+function sharedRelativeFromScreen(sharedPath) {
+  return `../../${sharedPath}`;
+}
+
+function createSharedAssetsManifest(generatedAt, folder, assets) {
+  return {
+    schema: "dev-export-shared-assets",
+    schemaVersion: "1.0.0",
+    generatedAt,
+    folder,
+    note: "Identical asset files used by two or more screens. Per-screen copies remain inside each screen assets folder so a screen stays portable on its own.",
+    pathConventions: {
+      packageRoot: "The `file` field is relative to the package root.",
+      fromScreenJson: "The `relativeFromScreen` field works from inside screens/<screen>/<screen>.json."
+    },
+    assetCount: assets.length,
+    totalBytes: assets.reduce((sum, a) => sum + (a.byteLength || 0), 0),
+    assets
+  };
+}
+
+function createSharedAssetsGuide(manifest) {
+  const lines = [
+    "# Shared Asset Library",
+    "",
+    `Generated: ${manifest.generatedAt}`,
+    "",
+    "These files are identical copies of assets used by more than one screen.",
+    "They live in `shared/assets/` so you do not have to hunt down duplicates.",
+    "",
+    "Per-screen copies are still present in each screen's `assets/` folder so a",
+    "single screen folder can be opened in isolation. Use the shared copies when",
+    "building shared components or a global asset pipeline.",
+    "",
+    "## How to use",
+    "",
+    "1. Open `shared/assets/manifest.json` for machine-readable references.",
+    "2. From a screen JSON, use `sharedAssets[].relativeFromScreen`.",
+    "3. From package root, use `sharedAssets[].file`.",
+    "4. Each asset entry lists the screens and layer paths where it is used.",
+    "",
+    `Total shared assets: ${manifest.assetCount}`,
+    ""
+  ];
+
+  manifest.assets.forEach((asset, index) => {
+    lines.push(`## ${index + 1}. ${asset.file}`);
+    lines.push("");
+    lines.push(`- Kind: ${asset.kind || "asset"}`);
+    lines.push(`- Role: ${asset.semanticRole || "unclassified"}`);
+    lines.push(`- MIME: ${asset.mime}`);
+    lines.push(`- Size: ${asset.byteLength} bytes`);
+    lines.push(`- Used by ${asset.screenCount} screens (${asset.usageCount} placements)`);
+    lines.push("");
+    for (const screen of asset.screens) {
+      lines.push(`- Screen ${pad2(screen.index)}: ${screen.name}`);
+      lines.push(`  - JSON: ${screen.json}`);
+      if (!screen.uses.length) {
+        lines.push("  - Usage location: not available");
+      } else {
+        for (const use of screen.uses.slice(0, 12)) {
+          lines.push(`  - ${use.layerPath || use.nodeName || "Layer"} (${use.usage || "asset"})`);
+        }
+        if (screen.uses.length > 12) {
+          lines.push(`  - +${screen.uses.length - 12} more placement(s) — see manifest.json`);
+        }
+      }
+    }
+    lines.push("");
+  });
+
+  return lines.join("\n");
+}
+
+function createFrontendGuide(packageManifest, sharedManifest) {
+  const screens = packageManifest.screens || [];
+  const shared = sharedManifest && sharedManifest.assets ? sharedManifest.assets : [];
+
+  const lines = [
+    "# Frontend Implementation Guide",
+    "",
+    `Generated: ${packageManifest.generatedAt}`,
+    `Screens: ${packageManifest.screenCount}`,
+    "",
+    "This guide explains how to turn the exported JSON and assets into a working",
+    "frontend implementation. It is intentionally framework-neutral; the same",
+    "data works for React, Next.js, Vue, Nuxt, Angular, Svelte, Flutter, SwiftUI,",
+    "Jetpack Compose, React Native or plain HTML/CSS.",
+    "",
+    "## 1. Package map",
+    "",
+    "- `package-manifest.json` — every screen, totals and recommended read order.",
+    "- `screens/<screen>/<screen>.json` — layout tree, styles, assets and variables.",
+    "- `screens/<screen>/<screen>@2x.png` — visual reference for that screen.",
+    "- `screens/<screen>/assets/` — screen-local assets + asset catalog.",
+    "- `shared/assets/` — identical assets reused by 2+ screens.",
+    "- `shared/assets/manifest.json` — shared asset usage references.",
+    "- `FRONTEND_IMPLEMENTATION_GUIDE.md` — this document.",
+    "",
+    "## 2. Recommended build order",
+    "",
+    "1. Read `package-manifest.json` and note screen order and totals.",
+    "2. Open one screen JSON and read `developerSummary` first.",
+    "3. Read `assetIndex` and `sharedAssets` before touching `nodes`.",
+    "4. Study the screen preview PNG to understand visual intent.",
+    "5. Map `nodes` into components, starting from the outermost frame.",
+    "6. Build shared primitives (buttons, inputs, cards) after two screens.",
+    "7. Repeat per screen, promoting repeated patterns into shared components.",
+    "8. Compare the finished page against the preview at 100% zoom.",
+    "",
+    "## 3. Screen JSON anatomy",
+    "",
+    "- `source` — file, page, screen node id and node counts.",
+    "- `guidance` — coordinate system, layer order and asset strategy.",
+    "- `developerSummary` — colors, typography, spacing and warnings.",
+    "- `assetIndex` — assets grouped by node, role and composed graphics.",
+    "- `assetManifest` — asset files, dimensions, roles and format paths.",
+    "- `sharedAssets` — shared files plus exact screens/layers where used.",
+    "- `variableCollections` / `variables` — tokens and modes.",
+    "- `nodes` — serialized layer tree (root is the selected screen).",
+    "",
+    "## 4. Node mapping",
+    "",
+    "- `FRAME` / `GROUP` → layout containers or semantic sections.",
+    "- `TEXT` → text element with typography from `text`.",
+    "- `RECTANGLE` / `ELLIPSE` → boxes, avatars, dividers or backgrounds.",
+    "- `VECTOR` / `BOOLEAN_OPERATION` → inline SVG or exported asset.",
+    "- `INSTANCE` → reusable component; check `mainComponent` and overrides.",
+    "- `COMPONENT` / `COMPONENT_SET` → component or variant set.",
+    "- Do not mirror every Figma wrapper one-to-one. Remove purely structural",
+    "  groups when native layout primitives can express the same result.",
+    "",
+    "## 5. Layout and responsiveness",
+    "",
+    "- `x` / `y` are relative to the immediate parent; `absoluteBoundingBox` is page space.",
+    "- `layoutMode` (`VERTICAL` / `HORIZONTAL`) maps to flex or stack layouts.",
+    "- `primaryAxisAlignItems` → justify-content; `counterAxisAlignItems` → align-items.",
+    "- `itemSpacing`, `padding*` and `counterAxisSpacing` map to gap and padding.",
+    "- `layoutSizingHorizontal` / `layoutSizingVertical`:",
+    "  - `FIXED` → fixed width/height.",
+    "  - `HUG` → width/height fit content.",
+    "  - `FILL` → flex: 1 / expand.",
+    "- `constraints` explain how children pin when a parent resizes.",
+    "- `minWidth`, `maxWidth`, `minHeight`, `maxHeight` should not be dropped.",
+    "- `clipsContent` maps to overflow hidden.",
+    "",
+    "## 6. Visual styles",
+    "",
+    "- `fills` / `strokes` include Figma paint data and a `hex` helper for SOLID paints.",
+    "- `opacity` and `blendMode` apply to the whole layer.",
+    "- `effects` contain shadows, blurs and inner shadows.",
+    "- `cornerRadius` or per-corner radii map to border-radius.",
+    "- `strokeWeight`, `strokeAlign`, `strokeCap`, `strokeJoin` and `dashPattern`",
+    "  describe borders. `strokeAlign: INSIDE` is the default web border box.",
+    "- `layoutGrids` and `gridStyleId` are optional hints; check `includeCSS` output",
+    "  only when it is enabled.",
+    "",
+    "## 7. Typography",
+    "",
+    "- `text.characters` is the exact copy.",
+    "- `fontName`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing` drive styles.",
+    "- `textAlignHorizontal` / `textAlignVertical` map to text-align and alignment.",
+    "- `textAutoResize` tells you whether the text box grows or stays fixed.",
+    "- If `styledSegments` exists, apply per-range styles instead of one style.",
+    "",
+    "## 8. Assets",
+    "",
+    "- `vectorAsset` → exact SVG for a vector layer.",
+    "- `composedVectorAsset` → merged decorative vector group.",
+    "- `imageAssets` → one entry per image fill; check `fillIndex`, `scaleMode`,",
+    "  `imageTransform`, `filters` and `rotation`.",
+    "- Asset paths inside screen JSON are relative to that screen folder.",
+    "- Shared entries also include `relativeFromScreen` (`../../shared/...`).",
+    "- Prefer composed SVGs for illustrations and individual SVGs for reusable icons.",
+    "",
+    "## 9. Shared asset library",
+    "",
+    shared.length
+      ? `${shared.length} asset files are reused across screens and live in shared/assets/.`
+      : "No identical assets were found across multiple screens in this export.",
+    "",
+  ];
+
+  if (shared.length) {
+    lines.push("| File | Kind | Screens | Placements |");
+    lines.push("| --- | --- | --- | --- |");
+    for (const asset of shared.slice(0, 40)) {
+      lines.push(`| ${asset.file} | ${asset.kind} | ${asset.screenCount} | ${asset.usageCount} |`);
+    }
+    if (shared.length > 40) lines.push(`| ... | ... | ... | ${shared.length - 40} more |`);
+    lines.push("");
+    lines.push("Use `shared/assets/manifest.json` for the exact layer path of every placement.");
+    lines.push("");
+  }
+
+  lines.push(
+    "## 10. Variables and tokens",
+    "",
+    "- `variableCollections` and `variables` contain resolved Figma variables and modes.",
+    "- `boundVariables` on a node tells you which token drives a property.",
+    "- Create a token layer in the target project (CSS variables, Tailwind theme,",
+    "  SwiftUI Environment, Compose MaterialTheme, etc.) and map tokens once.",
+    "",
+    "## 11. Components and variants",
+    "",
+    "- `INSTANCE.mainComponent` points back to the component name and key.",
+    "- `componentProperties` and `variantProperties` describe configurable props.",
+    "- `overrides` shows instance-level changes that must become props or slots.",
+    "",
+    "## 12. Interactions",
+    "",
+    "- `reactions` and overlay properties describe prototype links.",
+    "- Convert them into routing, navigation or modal state in the target app.",
+    "",
+    "## 13. Framework notes",
+    "",
+    "- React / Next.js: one component per repeated frame pattern, CSS modules or",
+    "  Tailwind, an `assets/` folder for shared files.",
+    "- Vue / Nuxt: define props from component properties and slots for children.",
+    "- Flutter: Widget tree from frames, `Row`/`Column` from auto layout, `Image.asset`.",
+    "- SwiftUI: VStack/HStack/ZStack, `Image(uiImage:)` or symbols for icons.",
+    "- HTML/CSS: flexbox or grid for layout; SVG inline for icons when possible.",
+    "",
+    "## 14. Quality checklist",
+    "",
+    "- [ ] Every screen matches its preview at 1× and 2× zoom.",
+    "- [ ] Text styles use the project's typography scale.",
+    "- [ ] Colors come from tokens, not ad-hoc hex values.",
+    "- [ ] Shared assets are imported once, not duplicated per screen.",
+    "- [ ] Auto layout behavior survives content changes.",
+    "- [ ] Fixed/hug/fill sizing matches the JSON.",
+    "- [ ] Interactive elements have hover, focus and disabled states added.",
+    "- [ ] Hidden-layer decisions match the export option.",
+    "- [ ] No raw Figma node names leak into user-facing copy.",
+    "",
+    "## 15. Exported screens",
+    "",
+  );
+
+  screens.forEach((screen) => {
+    lines.push(`${pad2(screen.index)}. ${screen.name}`);
+    lines.push(`   - JSON: ${screen.json}`);
+    lines.push(`   - Preview: ${screen.preview || "not included"}`);
+    lines.push(`   - Assets: ${screen.assetCount}`);
+    lines.push("");
+  });
+
+  return lines.join("\n");
+}
+
+
 function packageExportGuide(packageManifest) {
   const lines = [
     "DEV EXPORT FOR FIGMA — MULTI-SCREEN PACKAGE",
@@ -1288,6 +1685,20 @@ function packageExportGuide(packageManifest) {
       `    JSON: ${screen.json}`,
       `    Preview: ${screen.preview || "not included"}`,
       `    Assets: ${screen.assetCount}`,
+      ""
+    );
+  }
+
+  if (packageManifest.sharedAssets && packageManifest.sharedAssets.assetCount) {
+    lines.push(
+      "SHARED ASSETS",
+      "-------------",
+      `Folder: ${packageManifest.sharedAssets.folder}`,
+      `Manifest: ${packageManifest.sharedAssets.manifest}`,
+      `Guide: ${packageManifest.sharedAssets.guide}`,
+      `Identical files: ${packageManifest.sharedAssets.assetCount}`,
+      "",
+      "See FRONTEND_IMPLEMENTATION_GUIDE.md for the full build workflow.",
       ""
     );
   }
@@ -1412,16 +1823,15 @@ async function buildMultiScreenPackage(options) {
     throw new Error("NO_SELECTION");
   }
 
-  if (screens.length > 20) {
-    throw new Error("SCREEN_LIMIT");
-  }
-
   const generatedAt = new Date().toISOString();
+  const sourcePage = figma.currentPage;
   const packageBase = safeFileName(figma.root.name || "Figma");
   const packageRoot = `${packageBase}_Dev_Export`;
 
   const files = [];
   const entries = [];
+  const screenRecords = [];
+  const sharedCandidates = new Map();
   const totals = {
     serializedNodes: 0,
     assets: 0,
@@ -1430,7 +1840,9 @@ async function buildMultiScreenPackage(options) {
     raster: 0,
     pngAssetPreviews: 0,
     assetBytes: 0,
-    previewBytes: 0
+    previewBytes: 0,
+    sharedAssets: 0,
+    sharedAssetBytes: 0
   };
 
   for (let i = 0; i < screens.length; i++) {
@@ -1447,21 +1859,30 @@ async function buildMultiScreenPackage(options) {
       message: `${node.name} — reading layout and exporting assets`
     });
 
+    // Let the progress paint before this screen starts working.
+    await yieldToFigma();
+
     const result = await buildScreenExport(node, options, {
       screenIndex: index,
       totalScreens: screens.length,
-      screenFolder
+      screenFolder,
+      page: sourcePage
     });
+
+    await yieldToFigma();
 
     const designJsonName = `${screenBase}.json`;
     const designPath = `${screenFolder}/${designJsonName}`;
     const designText = JSON.stringify(result.design, null, 2);
 
+    const designFileIndex = files.length;
     files.push({
       fileName: designPath,
       mime: "application/json",
       bytes: utf8Encode(designText)
     });
+
+    const usageByRef = options.sharedAssets ? collectAssetUsages(result.design) : null;
 
     // Exact assets, folder-local so each screen remains portable on its own.
     for (const assetFile of result.assetFiles) {
@@ -1470,9 +1891,46 @@ async function buildMultiScreenPackage(options) {
         mime: assetFile.mime,
         bytes: assetFile.bytes
       });
+
+      if (usageByRef) {
+        const hash = assetContentHash(assetFile.mime, assetFile.bytes);
+        const key = assetFile.mime === "image/svg+xml"
+          ? `${assetFile.mime}|${hash}`
+          : `${assetFile.mime}|${hash}|${assetFile.bytes.length}`;
+        const manifestEntries = findAssetEntriesForFile(result.assetManifest, assetFile.fileName);
+        let candidate = sharedCandidates.get(key);
+        if (!candidate) {
+          candidate = {
+            key,
+            hash,
+            mime: assetFile.mime,
+            bytes: assetFile.bytes,
+            sourceFileName: assetFile.fileName,
+            occurrences: []
+          };
+          sharedCandidates.set(key, candidate);
+        }
+        const refs = manifestEntries.length ? manifestEntries.map((m) => m.ref) : [null];
+        for (const ref of refs) {
+          const meta = manifestEntries.find((m) => m.ref === ref) || null;
+          candidate.occurrences.push({
+            screenIndex: index,
+            screenName: node.name,
+            screenFolder,
+            designPath,
+            ref,
+            kind: meta ? meta.kind : null,
+            semanticRole: meta ? meta.semanticRole : null,
+            nodeId: meta ? meta.nodeId : null,
+            nodeName: meta ? meta.nodeName : null,
+            usages: ref ? (usageByRef.get(ref) || []) : []
+          });
+        }
+      }
     }
 
     const assetsManifest = createAssetsManifest(node, result);
+    const assetsManifestFileIndex = files.length;
     files.push({
       fileName: `${screenFolder}/assets/manifest.json`,
       mime: "application/json",
@@ -1559,6 +2017,144 @@ async function buildMultiScreenPackage(options) {
       assetBytes: result.assetBytes,
       previewBytes
     });
+
+    screenRecords.push({
+      index,
+      name: node.name,
+      screenFolder,
+      designPath,
+      designFileIndex,
+      assetsManifestFileIndex,
+      design: result.design,
+      assetsManifest
+    });
+
+    await yieldToFigma();
+  }
+
+  // Build a shared library for files that appear verbatim in two or more screens.
+  let sharedManifest = null;
+  const sharedAssetsFolder = "shared/assets";
+  if (options.sharedAssets) {
+    const usedPaths = new Set(files.map((f) => f.fileName));
+    const perScreenShared = new Map();
+
+    for (const candidate of sharedCandidates.values()) {
+      const screenIndexes = new Set(candidate.occurrences.map((o) => o.screenIndex));
+      if (screenIndexes.size < 2) continue;
+
+      const first = candidate.occurrences[0];
+      const ext = assetFileExtension(candidate.sourceFileName, candidate.mime);
+      const folder = sharedAssetFolder(first.kind, candidate.mime);
+      const base = safeFileName(first.nodeName || first.semanticRole || first.kind || "asset");
+      let sharedFile = `${sharedAssetsFolder}/${folder}/${base}-${candidate.hash.slice(0, 8)}.${ext}`;
+      let suffix = 2;
+      while (usedPaths.has(sharedFile)) {
+        sharedFile = `${sharedAssetsFolder}/${folder}/${base}-${candidate.hash.slice(0, 8)}-${suffix++}.${ext}`;
+      }
+      usedPaths.add(sharedFile);
+
+      files.push({
+        fileName: sharedFile,
+        mime: candidate.mime,
+        bytes: candidate.bytes
+      });
+
+      const byScreen = new Map();
+      for (const occurrence of candidate.occurrences) {
+        if (!byScreen.has(occurrence.screenIndex)) {
+          byScreen.set(occurrence.screenIndex, {
+            index: occurrence.screenIndex,
+            name: occurrence.screenName,
+            folder: occurrence.screenFolder,
+            json: occurrence.designPath,
+            uses: []
+          });
+        }
+        const record = byScreen.get(occurrence.screenIndex);
+        if (occurrence.usages.length) {
+          for (const use of occurrence.usages) record.uses.push(use);
+        } else if (occurrence.nodeId || occurrence.nodeName) {
+          record.uses.push({
+            nodeId: occurrence.nodeId,
+            nodeName: occurrence.nodeName,
+            usage: occurrence.kind || "asset"
+          });
+        }
+      }
+
+      const screensUsingAsset = Array.from(byScreen.values());
+      const sharedEntry = {
+        id: `shared-${candidate.hash.slice(0, 12)}`,
+        hash: candidate.hash,
+        kind: first.kind || (candidate.mime === "image/svg+xml" ? "svg" : "raster"),
+        semanticRole: first.semanticRole || null,
+        mime: candidate.mime,
+        file: sharedFile,
+        byteLength: candidate.bytes.length,
+        screenCount: screensUsingAsset.length,
+        usageCount: screensUsingAsset.reduce((sum, screen) => sum + screen.uses.length, 0),
+        screens: screensUsingAsset
+      };
+
+      if (!sharedManifest) {
+        sharedManifest = createSharedAssetsManifest(generatedAt, sharedAssetsFolder, []);
+      }
+      sharedManifest.assets.push(sharedEntry);
+
+      for (const screen of screensUsingAsset) {
+        if (!perScreenShared.has(screen.index)) perScreenShared.set(screen.index, []);
+        perScreenShared.get(screen.index).push({
+          id: sharedEntry.id,
+          file: sharedFile,
+          relativeFromScreen: sharedRelativeFromScreen(sharedFile),
+          kind: sharedEntry.kind,
+          semanticRole: sharedEntry.semanticRole,
+          mime: sharedEntry.mime,
+          byteLength: sharedEntry.byteLength,
+          usedAt: screen.uses
+        });
+      }
+    }
+
+    if (sharedManifest) {
+      sharedManifest.assetCount = sharedManifest.assets.length;
+      sharedManifest.totalBytes = sharedManifest.assets.reduce(
+        (sum, asset) => sum + (asset.byteLength || 0),
+        0
+      );
+      totals.sharedAssets = sharedManifest.assetCount;
+      totals.sharedAssetBytes = sharedManifest.totalBytes;
+
+      for (const record of screenRecords) {
+        const shared = perScreenShared.get(record.index);
+        if (!shared || !shared.length) continue;
+
+        record.design.sharedAssets = shared;
+        record.design.guidance = record.design.guidance || {};
+        record.design.guidance.sharedAssets =
+          "Identical files also used by other screens. Use relativeFromScreen from this JSON, or file from the package root. Screen-local assets remain available for standalone portability.";
+
+        files[record.designFileIndex].bytes = utf8Encode(JSON.stringify(record.design, null, 2));
+
+        record.assetsManifest.sharedAssets = shared;
+        files[record.assetsManifestFileIndex].bytes = utf8Encode(
+          JSON.stringify(record.assetsManifest, null, 2)
+        );
+      }
+
+      files.push({
+        fileName: `${sharedAssetsFolder}/manifest.json`,
+        mime: "application/json",
+        bytes: utf8Encode(JSON.stringify(sharedManifest, null, 2))
+      });
+
+      files.push({
+        fileName: "shared/SHARED_ASSETS.md",
+        mime: "text/markdown",
+        bytes: utf8Encode(createSharedAssetsGuide(sharedManifest))
+      });
+    }
   }
 
   const packageManifest = {
@@ -1569,22 +2165,37 @@ async function buildMultiScreenPackage(options) {
       editorType: figma.editorType,
       fileName: figma.root.name,
       page: {
-        id: figma.currentPage.id,
-        name: figma.currentPage.name
+        id: sourcePage.id,
+        name: sourcePage.name
       }
     },
     ordering: "Screens are ordered top-to-bottom, then left-to-right by their position on the Figma page.",
     nestedSelectionBehavior: "If both a selected screen and one of its descendants are selected, only the outermost selected node is packaged.",
     screenCount: entries.length,
     totals,
+    sharedAssets: sharedManifest
+      ? {
+          folder: sharedAssetsFolder,
+          manifest: `${sharedAssetsFolder}/manifest.json`,
+          guide: "shared/SHARED_ASSETS.md",
+          assetCount: sharedManifest.assetCount,
+          totalBytes: sharedManifest.totalBytes
+        }
+      : {
+          assetCount: 0,
+          note: "No identical asset files were found across two or more screens."
+        },
     recommendedReadOrder: [
       "package-manifest.json",
+      "FRONTEND_IMPLEMENTATION_GUIDE.md",
       "screens/<screen>/<screen>.json -> developerSummary",
       "screens/<screen>/<screen>.json -> assetIndex",
+      "screens/<screen>/<screen>.json -> sharedAssets",
       "screens/<screen>/<screen>.json -> nodes",
       "screens/<screen>/<screen>@2x.png",
       "screens/<screen>/assets/ASSET_CATALOG.html",
-      "screens/<screen>/assets/"
+      "shared/assets/manifest.json",
+      "shared/SHARED_ASSETS.md"
     ],
     screens: entries
   };
@@ -1602,6 +2213,12 @@ async function buildMultiScreenPackage(options) {
     bytes: utf8Encode(packageExportGuide(packageManifest))
   });
 
+  files.splice(2, 0, {
+    fileName: "FRONTEND_IMPLEMENTATION_GUIDE.md",
+    mime: "text/markdown",
+    bytes: utf8Encode(createFrontendGuide(packageManifest, sharedManifest))
+  });
+
   figma.ui.postMessage({
     type: "progress",
     value: 96,
@@ -1610,7 +2227,7 @@ async function buildMultiScreenPackage(options) {
   });
 
   const packageBytes = files.reduce((sum, file) => sum + (file.bytes ? file.bytes.length : 0), 0);
-  if (packageBytes > 350 * 1024 * 1024) {
+  if (packageBytes > 800 * 1024 * 1024) {
     throw new Error("PACKAGE_TOO_LARGE");
   }
 
@@ -1634,13 +2251,8 @@ async function postSelection() {
 }
 
 figma.on("selectionchange", () => {
-  latestPackageFiles = [];
-  latestPackageSummary = null;
-
-  figma.ui.postMessage({
-    type: "package-invalidated"
-  });
-
+  // Keep the last generated package downloadable even if the selection changes.
+  // A new export replaces it; until then the download stays available.
   postSelection();
 });
 
@@ -1649,13 +2261,12 @@ postSelection();
 function friendlyUserError(error) {
   const code = String(error && error.message ? error.message : error || "");
   if (code === "NO_SELECTION") return "Select one or more complete top-level frames, then try again.";
-  if (code === "NODE_LIMIT") return "A selected screen has more layers than the current limit. Increase Layer limit in Advanced options or export fewer screens.";
-  if (code === "SCREEN_LIMIT") return "Export up to 20 screens at a time to keep Figma responsive. Split larger selections into smaller batches.";
+  if (code === "NODE_LIMIT") return "A selected screen has more layers than the current limit. Increase Layer limit in Advanced options.";
   if (code === "PREVIEW_UNAVAILABLE") return "A selected screen could not be rendered as a PNG preview. Turn off Screen previews and try again.";
   if (code === "HIDDEN_SCREEN") return "One selected screen is hidden. Make it visible or enable hidden layers, then try again.";
   if (code === "PACKAGE_NOT_READY") return "Generate the export package before downloading it.";
-  if (code === "PACKAGE_TOO_LARGE") return "This export is too large to package safely in one run. Export fewer screens or reduce the asset budget.";
-  return "The export could not be completed. Try again with fewer screens, a smaller asset budget, or adjusted Advanced options.";
+  if (code === "PACKAGE_TOO_LARGE") return "This export is extremely large. Reduce the asset budget or turn off PNG copies for a smaller package.";
+  return "The export could not be completed. Try again with a smaller asset budget or adjusted Advanced options.";
 }
 
 figma.ui.onmessage = async (msg) => {
@@ -1670,6 +2281,7 @@ figma.ui.onmessage = async (msg) => {
         embedSvgInJson: !!msg.options.embedSvgInJson,
         collectImages: msg.options.collectImages !== false,
         collectAssetPng: msg.options.collectAssetPng !== false,
+        sharedAssets: msg.options.sharedAssets !== false,
         assetPngScale: msg.options.assetPngScale === 1 ? 1 : 2,
         includePreview: msg.options.includePreview !== false,
         previewScale: msg.options.previewScale === 1 ? 1 : 2,
@@ -1722,6 +2334,19 @@ figma.ui.onmessage = async (msg) => {
           fileCount: latestPackageFiles.length
         }
       });
+    }
+
+    if (msg.type === "select-all-frames") {
+      const frames = topLevelScreens();
+      if (frames.length) {
+        figma.currentPage.selection = frames;
+      }
+      await postSelection();
+    }
+
+    if (msg.type === "clear-selection") {
+      figma.currentPage.selection = [];
+      await postSelection();
     }
 
     if (msg.type === "refresh-selection") {

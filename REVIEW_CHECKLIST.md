@@ -39,10 +39,10 @@ Source: Figma Plugin and Widget Review Guidelines and classic plugin publishing 
 - [ ] No external AI chat, MCP server, or programmatic AI access to Figma files
 
 ## Performance
-- [ ] Maximum 20 screens per export
+- [ ] Unlimited screens per export (progress shown while processing)
 - [ ] Default layer cap is 4,000 per screen
 - [ ] Default asset budget is 40 MB per screen
-- [ ] Package hard cap is 350 MB
+- [ ] Package hard cap is 800 MB
 - [ ] No background process remains after plugin closes
 
 ## Community listing
