@@ -998,6 +998,35 @@ function buildNodeCss(node, out, parent) {
   return compactObject({ layout, box, visual, typography, assetHints });
 }
 
+function subtreeTextCount(node, depth = 0) {
+  if (!node || depth > 6) return 0;
+  let count = node.type === "TEXT" ? 1 : 0;
+  if ("children" in node && Array.isArray(node.children)) {
+    for (const child of node.children) count += subtreeTextCount(child, depth + 1);
+  }
+  return count;
+}
+
+function isStatusBarNode(node, parent) {
+  if (!node) return false;
+  const name = String(node.name || "");
+  if (/status\\s*bar|statusbar|notification\\s*bar|system\\s*bar|ios\\s*status|android\\s*status/i.test(name)) return true;
+  if (!parent) return false;
+  if (typeof node.y !== "number" || Math.abs(node.y) > 1) return false;
+  if (typeof node.height !== "number" || node.height < 16 || node.height > 50) return false;
+  if (typeof node.width !== "number") return false;
+  const parentWidth = typeof parent.width === "number" ? parent.width : node.width;
+  if (node.width < parentWidth * 0.75) return false;
+  if (subtreeTextCount(node) > 0) return false;
+  const siblings = Array.isArray(parent.children) ? parent.children : [];
+  return siblings.some((sibling) =>
+    sibling !== node &&
+    typeof sibling.y === "number" &&
+    sibling.y >= node.y + node.height - 1 &&
+    subtreeTextCount(sibling) > 0
+  );
+}
+
 async function serializeNode(node, options, ctx, depth = 0, parent = null, siblingIndex = 0) {
   if (!options.includeHidden && "visible" in node && node.visible === false) return null;
 
@@ -1222,7 +1251,9 @@ async function serializeNode(node, options, ctx, depth = 0, parent = null, sibli
     const children = [];
     let childIndex = 0;
     for (const child of node.children) {
-      const serialized = await serializeNode(child, options, ctx, depth + 1, out, childIndex++);
+      const index = childIndex++;
+      if (isStatusBarNode(child, node)) continue;
+      const serialized = await serializeNode(child, options, ctx, depth + 1, out, index);
       if (serialized) children.push(serialized);
     }
     out.children = children;
